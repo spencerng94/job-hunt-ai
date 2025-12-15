@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Linkedin, X, Shield, CheckCircle, ArrowRight, Settings, AlertTriangle } from 'lucide-react';
+import { Mail, X, Shield, ArrowRight, Settings, AlertTriangle } from 'lucide-react';
 import { AccountProvider, ConnectedAccount } from '../types';
 import { connectAccount, getGoogleClientId } from '../services/authService';
 
@@ -11,7 +11,6 @@ interface ConnectAccountModalProps {
 
 const ConnectAccountModal: React.FC<ConnectAccountModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectingProvider, setConnectingProvider] = useState<AccountProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
   
   // Manual override state
@@ -46,7 +45,6 @@ const ConnectAccountModal: React.FC<ConnectAccountModalProps> = ({ isOpen, onClo
     }
 
     setIsConnecting(true);
-    setConnectingProvider(provider);
     setError(null);
     
     try {
@@ -62,7 +60,6 @@ const ConnectAccountModal: React.FC<ConnectAccountModalProps> = ({ isOpen, onClo
       }
     } finally {
       setIsConnecting(false);
-      setConnectingProvider(null);
     }
   };
 
@@ -90,10 +87,10 @@ const ConnectAccountModal: React.FC<ConnectAccountModalProps> = ({ isOpen, onClo
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
                <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center relative">
                  <div className="absolute inset-0 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin"></div>
-                 {connectingProvider === 'Gmail' ? <Mail className="text-indigo-600" /> : <Linkedin className="text-indigo-600" />}
+                 <Mail className="text-indigo-600" />
                </div>
                <div className="text-center">
-                 <h4 className="font-bold text-slate-800 text-lg">Connecting to {connectingProvider}...</h4>
+                 <h4 className="font-bold text-slate-800 text-lg">Connecting to Gmail...</h4>
                  <p className="text-sm text-slate-500">Please wait while we authenticate...</p>
                </div>
             </div>
@@ -142,23 +139,6 @@ const ConnectAccountModal: React.FC<ConnectAccountModalProps> = ({ isOpen, onClo
                   </div>
                 </div>
                 <ArrowRight size={18} className="text-slate-300 group-hover:text-red-400" />
-              </button>
-
-              {/* LinkedIn Button */}
-              <button 
-                onClick={() => handleConnect('LinkedIn')}
-                className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-blue-200 hover:bg-blue-50/30 transition group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                    <Linkedin size={20} />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-bold text-slate-800 group-hover:text-blue-700">LinkedIn <span className="text-[10px] font-normal text-slate-400 border border-slate-200 rounded px-1 ml-1">SIMULATED</span></div>
-                    <div className="text-xs text-slate-500">Sync messages (Demo Mode)</div>
-                  </div>
-                </div>
-                <ArrowRight size={18} className="text-slate-300 group-hover:text-blue-400" />
               </button>
 
               <div className="mt-4 bg-slate-50 p-3 rounded-lg flex items-start gap-3 border border-slate-100">

@@ -34,7 +34,7 @@ export interface JobApplication {
   nextInterviewDate?: string;
 }
 
-export type AccountProvider = 'Gmail' | 'LinkedIn';
+export type AccountProvider = 'Gmail';
 
 export interface InboundMessage {
   id: string;

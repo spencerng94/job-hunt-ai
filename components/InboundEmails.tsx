@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { InboundMessage, JobApplication, ApplicationStatus } from '../types';
 import { extractJobDetailsFromEmail } from '../services/geminiService';
-import { Mail, RefreshCw, Inbox, Linkedin, CalendarClock, Trash2 } from 'lucide-react';
+import { Mail, RefreshCw, Inbox, CalendarClock, Trash2, Search } from 'lucide-react';
 import MessageViewer from './MessageViewer';
 import CreateApplicationModal from './CreateApplicationModal';
 
@@ -29,25 +29,30 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
   onScan
 }) => {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Gmail' | 'LinkedIn'>('All');
   const [timeWindow, setTimeWindow] = useState<string>('30d');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Create Application Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isParsingEmail, setIsParsingEmail] = useState(false);
   const [draftApplication, setDraftApplication] = useState<Partial<JobApplication> | null>(null);
 
-  // Filter messages based on provider
+  // Filter messages based on search term (Sender Name or Email)
   const filteredMessages = useMemo(() => {
-    if (activeFilter === 'All') return emails;
-    return emails.filter(msg => msg.provider === activeFilter);
-  }, [emails, activeFilter]);
+    if (!searchTerm.trim()) return emails;
+    
+    const lowerTerm = searchTerm.toLowerCase();
+    return emails.filter(msg => 
+      (msg.senderName && msg.senderName.toLowerCase().includes(lowerTerm)) || 
+      (msg.senderEmail && msg.senderEmail.toLowerCase().includes(lowerTerm))
+    );
+  }, [emails, searchTerm]);
 
   // Group messages by sender to create "chains"
   const groupedMessages = useMemo(() => {
     const groups: Record<string, InboundMessage[]> = {};
     filteredMessages.forEach(msg => {
-      // Use senderEmail for Gmail, or senderName for LinkedIn/others if email is missing
+      // Use senderEmail for Gmail, or senderName if email is missing
       const key = msg.senderEmail || msg.senderName;
       if (!groups[key]) {
         groups[key] = [];
@@ -145,7 +150,7 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Scan Your Inbox</h2>
         <p className="text-slate-500 max-w-md mb-8">
-          Connect your accounts to scan for recruiter emails, LinkedIn messages, and status updates automatically.
+          Connect your accounts to scan for recruiter emails and status updates automatically.
         </p>
         
         <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-200 mb-6">
@@ -213,7 +218,7 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
     <div className="flex h-[calc(100vh-8rem)] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in">
       {/* Left Sidebar: Message List */}
       <div className="w-full md:w-1/3 border-r border-slate-200 bg-slate-50 flex flex-col">
-        {/* Header & Filter Tabs */}
+        {/* Header & Filter */}
         <div className="flex flex-col border-b border-slate-200 bg-white">
             <div className="p-4 flex justify-between items-center">
                 <h3 className="font-bold text-slate-800 text-lg">Messages</h3>
@@ -240,20 +245,18 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
                    </button>
                 </div>
             </div>
-            <div className="flex px-4 gap-4">
-                {(['All', 'Gmail', 'LinkedIn'] as const).map(filter => (
-                    <button
-                        key={filter}
-                        onClick={() => setActiveFilter(filter)}
-                        className={`pb-3 text-sm font-medium border-b-2 transition ${
-                            activeFilter === filter 
-                                ? 'border-indigo-600 text-indigo-600' 
-                                : 'border-transparent text-slate-500 hover:text-slate-700'
-                        }`}
-                    >
-                        {filter}
-                    </button>
-                ))}
+            {/* Search Input */}
+            <div className="px-4 pb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Filter by sender name or email..." 
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
         </div>
 
@@ -261,7 +264,11 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
         <div className="overflow-y-auto flex-1">
           {sortedSenders.length === 0 ? (
              <div className="p-8 text-center text-slate-400">
-               <p>No messages found in the last {timeWindow === '3m' ? '3 Months' : timeWindow === '7d' ? '7 Days' : '30 Days'}.</p>
+               {searchTerm ? (
+                 <p>No messages matching "{searchTerm}".</p>
+               ) : (
+                 <p>No messages found in the last {timeWindow === '3m' ? '3 Months' : timeWindow === '7d' ? '7 Days' : '30 Days'}.</p>
+               )}
              </div>
           ) : (
              sortedSenders.map(senderKey => {
@@ -286,11 +293,9 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
                     <div className="text-xs text-slate-500 mb-2 truncate">{latest.snippet}</div>
                     
                     <div className="flex items-center gap-2">
-                         <span className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${
-                            latest.provider === 'Gmail' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-blue-50 text-blue-700 border-blue-100'
-                         }`}>
-                            {latest.provider === 'Gmail' ? <Mail size={10} /> : <Linkedin size={10} />}
-                            {latest.provider}
+                         <span className="text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 bg-red-50 text-red-700 border-red-100">
+                            <Mail size={10} />
+                            Gmail
                          </span>
                          {thread.length > 1 && (
                             <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{thread.length} msgs</span>

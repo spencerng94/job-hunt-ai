@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ConnectedAccount } from '../types';
-import { Mail, Linkedin, Globe, Trash2, RefreshCw, Plus, CheckCircle2, AlertCircle, ShieldCheck, ExternalLink, Clock } from 'lucide-react';
+import { Mail, Globe, Trash2, RefreshCw, Plus, CheckCircle2, AlertCircle, ShieldCheck, ExternalLink, Clock } from 'lucide-react';
 import ConnectAccountModal from './ConnectAccountModal';
 import { getGoogleClientId } from '../services/authService';
 
@@ -29,7 +29,6 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ accounts, onAddAccoun
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case 'Gmail': return <Mail className="text-red-500" size={24} />;
-      case 'LinkedIn': return <Linkedin className="text-blue-600" size={24} />;
       default: return <Globe className="text-slate-500" size={24} />;
     }
   };
@@ -81,7 +80,7 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ accounts, onAddAccoun
                <Globe size={32} />
              </div>
              <h3 className="font-bold text-slate-800 mb-2">No Accounts Connected</h3>
-             <p className="text-slate-500 mb-6 max-w-sm mx-auto">Connect your Gmail or LinkedIn account to start tracking applications automatically.</p>
+             <p className="text-slate-500 mb-6 max-w-sm mx-auto">Connect your Gmail account to start tracking applications automatically.</p>
              <button 
                 onClick={() => setIsModalOpen(true)}
                 className="text-indigo-600 font-semibold hover:underline"

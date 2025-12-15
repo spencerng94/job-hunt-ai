@@ -44,8 +44,7 @@ export const connectAccount = async (provider: AccountProvider): Promise<Connect
     return connectRealGoogleAccount(currentClientId);
   }
   
-  // LinkedIn API requires server-side OAuth (Client Secret cannot be exposed).
-  // We strictly simulate LinkedIn in this frontend-only demo.
+  // Default to mock if no client ID is present
   return connectMockAccount(provider);
 };
 
@@ -166,7 +165,7 @@ const connectMockAccount = async (provider: AccountProvider): Promise<ConnectedA
         console.warn("Popup blocked or failed, falling back to silent mock", e);
     }
 
-    const delay = provider === 'LinkedIn' ? 2000 : 1500;
+    const delay = 1500;
     
     setTimeout(() => {
       if (popup && !popup.closed) popup.close();
@@ -175,33 +174,18 @@ const connectMockAccount = async (provider: AccountProvider): Promise<ConnectedA
       const timestamp = new Date().toISOString();
       const expiresAt = Date.now() + 3600 * 1000; // 1 hour from now
 
-      if (provider === 'Gmail') {
-        const randId = Math.floor(Math.random() * 1000);
-        resolve({
-          id,
-          provider: 'Gmail',
-          name: 'Demo User (Mock)',
-          email: `demo.user.${randId}@gmail.com`,
-          avatarUrl: `https://ui-avatars.com/api/?name=Demo+User&background=EA4335&color=fff`,
-          accessToken: `mock_token_${randId}`,
-          tokenExpiresAt: expiresAt,
-          status: 'Connected',
-          lastSyncedAt: timestamp
-        });
-      } else {
-        const randId = Math.floor(Math.random() * 1000);
-        resolve({
-          id,
-          provider: 'LinkedIn',
-          name: 'Demo User (Mock)',
-          email: `demo.user.${randId}@linkedin.com`,
-          avatarUrl: `https://ui-avatars.com/api/?name=Demo+User&background=0077b5&color=fff`,
-          accessToken: `mock_token_${randId}`,
-          tokenExpiresAt: expiresAt,
-          status: 'Connected',
-          lastSyncedAt: timestamp
-        });
-      }
+      const randId = Math.floor(Math.random() * 1000);
+      resolve({
+        id,
+        provider: 'Gmail',
+        name: 'Demo User (Mock)',
+        email: `demo.user.${randId}@gmail.com`,
+        avatarUrl: `https://ui-avatars.com/api/?name=Demo+User&background=EA4335&color=fff`,
+        accessToken: `mock_token_${randId}`,
+        tokenExpiresAt: expiresAt,
+        status: 'Connected',
+        lastSyncedAt: timestamp
+      });
     }, delay);
   });
 };

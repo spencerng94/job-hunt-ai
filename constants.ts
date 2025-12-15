@@ -117,20 +117,6 @@ export const MOCK_MESSAGES: InboundMessage[] = [
     link: '#',
     isRead: true,
     linkedApplicationId: '1'
-  },
-  {
-    id: 'm2',
-    accountId: 'acc_2',
-    provider: 'LinkedIn',
-    senderName: 'Recruiter Bot',
-    subject: 'Thanks for applying',
-    snippet: 'Your application to StartupInc has been received...',
-    fullBody: 'Your application to StartupInc has been received.',
-    rawContent: '...',
-    receivedAt: getRelativeDate(-5, 9),
-    link: '#',
-    isRead: true,
-    linkedApplicationId: '2'
   }
 ];
 
