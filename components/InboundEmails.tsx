@@ -1,36 +1,31 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { InboundMessage, JobApplication, ApplicationStatus } from '../types';
 import { analyzeEmailWithGemini, EmailAnalysisResult } from '../services/geminiService';
-import { Mail, Sparkles, Link as LinkIcon, AlertCircle, RefreshCw, Inbox, Clock, Calendar, CheckCircle2, Building2, Linkedin } from 'lucide-react';
-import { STATUS_COLORS } from '../constants';
+import { Mail, RefreshCw, Inbox, Linkedin, CalendarClock } from 'lucide-react';
 import MessageViewer from './MessageViewer';
 
 interface InboundEmailsProps {
-  emails: InboundMessage[]; // Renamed from emails to messages conceptually, but prop name kept for compatibility with parent
+  emails: InboundMessage[]; 
   applications: JobApplication[];
   onLinkEmail: (email: InboundMessage, appId: string) => void;
   onUpdateAppStatus: (appId: string, status: ApplicationStatus) => void;
   isScanned: boolean;
   isScanning: boolean;
-  onScan: () => void;
+  onScan: (timeWindow: string) => void;
 }
 
 const InboundEmails: React.FC<InboundEmailsProps> = ({ 
   emails, 
   applications, 
   onLinkEmail, 
-  onUpdateAppStatus,
   isScanned,
   isScanning,
   onScan
 }) => {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'All' | 'Gmail' | 'LinkedIn'>('All');
+  const [timeWindow, setTimeWindow] = useState<string>('30d');
   
-  // Analysis State
-  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<Record<string, EmailAnalysisResult>>({});
-
   // Filter messages based on provider
   const filteredMessages = useMemo(() => {
     if (activeFilter === 'All') return emails;
@@ -70,16 +65,6 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
      return emails.find(e => e.id === selectedMessageId);
   }, [emails, selectedMessageId]);
 
-  const handleAnalyze = async (message: InboundMessage) => {
-    setAnalyzingId(message.id);
-    const result = await analyzeEmailWithGemini(message.snippet, message.subject || 'No Subject');
-    setAnalysisResult(prev => ({
-      ...prev,
-      [message.id]: result
-    }));
-    setAnalyzingId(null);
-  };
-
   if (!isScanned && emails.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center animate-fade-in">
@@ -90,8 +75,22 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
         <p className="text-slate-500 max-w-md mb-8">
           Connect your accounts to scan for recruiter emails, LinkedIn messages, and status updates automatically.
         </p>
+        
+        <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-200 mb-6">
+           <CalendarClock size={18} className="text-slate-500 ml-2" />
+           <select 
+             value={timeWindow} 
+             onChange={(e) => setTimeWindow(e.target.value)}
+             className="bg-transparent border-none text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer outline-none"
+           >
+             <option value="7d">Last 7 Days</option>
+             <option value="30d">Last 30 Days</option>
+             <option value="3m">Last 3 Months</option>
+           </select>
+        </div>
+
         <button 
-          onClick={onScan}
+          onClick={() => onScan(timeWindow)}
           disabled={isScanning}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg font-semibold shadow-md transition-all flex items-center gap-2"
         >
@@ -133,9 +132,28 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
         <div className="flex flex-col border-b border-slate-200 bg-white">
             <div className="p-4 flex justify-between items-center">
                 <h3 className="font-bold text-slate-800 text-lg">Messages</h3>
-                <button onClick={onScan} className="text-slate-400 hover:text-indigo-600" title="Rescan" disabled={isScanning}>
-                    <RefreshCw size={18} className={isScanning ? "animate-spin" : ""} />
-                </button>
+                
+                <div className="flex items-center gap-2">
+                   {/* Time Window Selector (Mini) */}
+                   <select 
+                      value={timeWindow} 
+                      onChange={(e) => setTimeWindow(e.target.value)}
+                      className="text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1 text-slate-600 focus:outline-none focus:border-indigo-500"
+                   >
+                     <option value="7d">7 Days</option>
+                     <option value="30d">30 Days</option>
+                     <option value="3m">3 Months</option>
+                   </select>
+
+                   <button 
+                      onClick={() => onScan(timeWindow)} 
+                      className="text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-indigo-50 transition" 
+                      title="Rescan" 
+                      disabled={isScanning}
+                   >
+                      <RefreshCw size={18} className={isScanning ? "animate-spin" : ""} />
+                   </button>
+                </div>
             </div>
             <div className="flex px-4 gap-4">
                 {(['All', 'Gmail', 'LinkedIn'] as const).map(filter => (
@@ -158,7 +176,7 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
         <div className="overflow-y-auto flex-1">
           {sortedSenders.length === 0 ? (
              <div className="p-8 text-center text-slate-400">
-               <p>No messages found.</p>
+               <p>No messages found in the last {timeWindow === '3m' ? '3 Months' : timeWindow === '7d' ? '7 Days' : '30 Days'}.</p>
              </div>
           ) : (
              sortedSenders.map(senderKey => {

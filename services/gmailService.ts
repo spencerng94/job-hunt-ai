@@ -2,17 +2,37 @@ import { InboundMessage } from '../types';
 
 /**
  * Fetches relevant emails from Gmail API
- * Searches for keywords like 'interview', 'application', 'offer' to filter noise.
+ * Updated with robust queries to catch recruiter outreach and support time windows.
  */
-export const fetchGmailMessages = async (accessToken: string, accountId: string, limit: number = 5): Promise<InboundMessage[]> => {
+export const fetchGmailMessages = async (
+  accessToken: string, 
+  accountId: string, 
+  limit: number = 20, // Increased default limit to account for broader search
+  timeWindow: string = '30d' // '7d', '30d', '3m'
+): Promise<InboundMessage[]> => {
   if (accessToken.startsWith('mock_')) {
     return []; // Skip for mock accounts
   }
 
   try {
-    // 1. Search for messages
-    const query = 'subject:(interview OR application OR offer OR schedule) -category:promotions -category:social';
+    // Convert UI time window to Gmail API format
+    let newerThan = '30d';
+    if (timeWindow === '7d') newerThan = '7d';
+    if (timeWindow === '3m') newerThan = '90d';
+
+    // BROADENED SEARCH STRATEGY:
+    // 1. Subject Keywords: Standard interview/offer terms.
+    // 2. Body Keywords: Phrases recruiters use ("impressed by your", "found your profile").
+    // 3. Removed 'category:promotions' exclusion because automated recruiter emails (Wellfound, Hired, etc.) often land there.
     
+    const subjectTerms = 'subject:(interview OR application OR offer OR schedule OR hiring OR opportunity OR "quick chat" OR role)';
+    const bodyTerms = '("join our team" OR "hiring" OR "found your profile" OR "impressed by your" OR "talent" OR "recruiter" OR "wellfound" OR "angellist")';
+    
+    // Combine queries: (Subject Matches OR Body Matches) AND Newer Than X
+    const query = `(${subjectTerms} OR ${bodyTerms}) newer_than:${newerThan}`;
+    
+    console.log("Executing Gmail Query:", query);
+
     const listResponse = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=${limit}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -23,12 +43,10 @@ export const fetchGmailMessages = async (accessToken: string, accountId: string,
         try {
             errorData = await listResponse.json();
         } catch (e) {
-            // If json parse fails, use text fallback in the error message
             throw new Error(`Gmail API Error: ${listResponse.status} ${listResponse.statusText}`);
         }
 
         console.error("Gmail API Error:", errorData);
-
         const message = errorData.error?.message || JSON.stringify(errorData);
         
         if (listResponse.status === 403) {
@@ -57,22 +75,28 @@ export const fetchGmailMessages = async (accessToken: string, accountId: string,
     // 2. Fetch full details for each message
     const messages: InboundMessage[] = [];
     
-    for (const msg of listData.messages) {
-      const detailResponse = await fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      
-      if (detailResponse.ok) {
-        const data = await detailResponse.json();
-        const parsed = parseGmailMessage(data, accountId);
-        if (parsed) messages.push(parsed);
-      } else {
+    // Process in parallel chunks to speed up loading
+    const fetchDetails = async (msg: any) => {
+      try {
+        const detailResponse = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        
+        if (detailResponse.ok) {
+          const data = await detailResponse.json();
+          const parsed = parseGmailMessage(data, accountId);
+          if (parsed) return parsed;
+        }
+      } catch (e) {
         console.warn(`Failed to fetch details for message ${msg.id}`);
       }
-    }
+      return null;
+    };
 
-    return messages;
+    const results = await Promise.all(listData.messages.map(fetchDetails));
+    return results.filter((m): m is InboundMessage => m !== null);
+
   } catch (error) {
     console.error("Gmail Fetch Service Error:", error);
     throw error; // Re-throw to be caught by UI
@@ -88,7 +112,6 @@ const parseGmailMessage = (data: any, accountId: string): InboundMessage | null 
     const from = getHeader('From');
     
     // Parse Sender
-    // Format usually: "Name <email@example.com>" or "email@example.com"
     let senderName = from;
     let senderEmail = from;
     const match = from.match(/(.*)<(.*)>/);
@@ -102,7 +125,6 @@ const parseGmailMessage = (data: any, accountId: string): InboundMessage | null 
     let rawContent = JSON.stringify(data.payload, null, 2);
     
     // Attempt to find HTML part
-    // Gmail API payload parts can be nested
     const findPart = (parts: any[], mimeType: string): any => {
       if (!parts) return null;
       for (const part of parts) {

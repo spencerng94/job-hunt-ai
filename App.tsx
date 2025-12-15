@@ -92,7 +92,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleScanMessages = async () => {
+  const handleScanMessages = async (timeWindow: string = '30d') => {
     setIsScanning(true);
     
     // 1. Sync account tokens/status
@@ -106,7 +106,8 @@ const App: React.FC = () => {
       let newRealMessages: InboundMessage[] = [];
       for (const acc of updatedAccounts) {
         if (acc.provider === 'Gmail' && acc.accessToken && !acc.accessToken.startsWith('mock_')) {
-          const gmailMsgs = await fetchGmailMessages(acc.accessToken, acc.id);
+          // Pass the selected time window to the service
+          const gmailMsgs = await fetchGmailMessages(acc.accessToken, acc.id, 20, timeWindow);
           newRealMessages = [...newRealMessages, ...gmailMsgs];
         }
       }
@@ -121,13 +122,7 @@ const App: React.FC = () => {
            const existingIds = new Set(prev.map(m => m.id));
            const uniqueNewReal = newRealMessages.filter(m => !existingIds.has(m.id));
            
-           // If we are in MOCK mode, we might want to inject the mock "new" message for demo purposes
-           // But if we are in REAL mode, we only want real messages.
-           
            let final = [...uniqueNewReal, ...prev];
-           
-           // Special logic: If in Mock mode, ensure the 'new inbound' demo message appears if desired
-           // (Logic here is simplified: just standard merge)
 
            return final.sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime());
         });
@@ -249,7 +244,7 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center gap-4">
              <button 
-               onClick={handleScanMessages}
+               onClick={() => handleScanMessages('30d')}
                disabled={isScanning || accounts.length === 0}
                title={accounts.length === 0 ? "Connect an account to scan" : "Scan recent emails"}
                className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-md transition ${
@@ -259,7 +254,7 @@ const App: React.FC = () => {
                }`}
              >
                <RefreshCw size={16} className={isScanning ? "animate-spin" : ""} />
-               <span className="hidden sm:inline">Rescan (30d)</span>
+               <span className="hidden sm:inline">Rescan</span>
              </button>
           </div>
         </header>
