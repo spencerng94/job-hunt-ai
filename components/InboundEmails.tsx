@@ -1,14 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { InboundMessage, JobApplication, ApplicationStatus } from '../types';
-import { analyzeEmailWithGemini, EmailAnalysisResult } from '../services/geminiService';
-import { Mail, RefreshCw, Inbox, Linkedin, CalendarClock } from 'lucide-react';
+import { extractJobDetailsFromEmail } from '../services/geminiService';
+import { Mail, RefreshCw, Inbox, Linkedin, CalendarClock, Trash2 } from 'lucide-react';
 import MessageViewer from './MessageViewer';
+import CreateApplicationModal from './CreateApplicationModal';
 
 interface InboundEmailsProps {
   emails: InboundMessage[]; 
   applications: JobApplication[];
   onLinkEmail: (email: InboundMessage, appId: string) => void;
   onUpdateAppStatus: (appId: string, status: ApplicationStatus) => void;
+  onAddApplication: (app: JobApplication) => void;
+  onDeleteMessage: (id: string) => void;
   isScanned: boolean;
   isScanning: boolean;
   onScan: (timeWindow: string) => void;
@@ -18,6 +21,9 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
   emails, 
   applications, 
   onLinkEmail, 
+  onUpdateAppStatus,
+  onAddApplication,
+  onDeleteMessage,
   isScanned,
   isScanning,
   onScan
@@ -26,6 +32,11 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
   const [activeFilter, setActiveFilter] = useState<'All' | 'Gmail' | 'LinkedIn'>('All');
   const [timeWindow, setTimeWindow] = useState<string>('30d');
   
+  // Create Application Modal State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isParsingEmail, setIsParsingEmail] = useState(false);
+  const [draftApplication, setDraftApplication] = useState<Partial<JobApplication> | null>(null);
+
   // Filter messages based on provider
   const filteredMessages = useMemo(() => {
     if (activeFilter === 'All') return emails;
@@ -64,6 +75,67 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
   const selectedMessage = useMemo(() => {
      return emails.find(e => e.id === selectedMessageId);
   }, [emails, selectedMessageId]);
+
+  const handleCreateApplicationClick = async () => {
+    if (!selectedMessage) return;
+
+    setIsCreateModalOpen(true);
+    setIsParsingEmail(true);
+
+    try {
+      const extracted = await extractJobDetailsFromEmail(selectedMessage.fullBody, selectedMessage.subject || '');
+      
+      setDraftApplication({
+        companyName: extracted.companyName,
+        roleTitle: extracted.roleTitle,
+        jobLink: extracted.jobLink,
+        status: extracted.status,
+        nextInterviewDate: extracted.nextInterviewDate,
+        dateApplied: new Date().toISOString(), // Default to today
+        notes: [],
+        recruiter: {
+            name: selectedMessage.senderName,
+            email: selectedMessage.senderEmail
+        }
+      });
+    } catch (e) {
+      console.error("Error extracting details", e);
+      // Fallback draft
+      setDraftApplication({
+          companyName: '',
+          roleTitle: '',
+          status: ApplicationStatus.RECRUITER_SCREEN,
+          dateApplied: new Date().toISOString(),
+      });
+    } finally {
+      setIsParsingEmail(false);
+    }
+  };
+
+  const handleFinalizeCreateApplication = (appData: Partial<JobApplication>) => {
+    if (!selectedMessage) return;
+
+    const newApp: JobApplication = {
+      id: `app_gen_${Date.now()}`,
+      dateApplied: new Date().toISOString(),
+      companyName: appData.companyName || 'Unknown Company',
+      roleTitle: appData.roleTitle || 'Unknown Role',
+      jobLink: appData.jobLink || '',
+      status: appData.status || ApplicationStatus.SUBMITTED,
+      notes: appData.notes || [],
+      recruiter: appData.recruiter,
+      nextInterviewDate: appData.nextInterviewDate,
+      ...appData
+    } as JobApplication;
+
+    // 1. Create App
+    onAddApplication(newApp);
+    // 2. Link current email to it
+    onLinkEmail(selectedMessage, newApp.id);
+    
+    setIsCreateModalOpen(false);
+    alert(`Application for ${newApp.companyName} created and linked!`);
+  };
 
   if (!isScanned && emails.length === 0) {
     return (
@@ -117,8 +189,21 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
          <MessageViewer 
             message={selectedMessage} 
             onClose={() => setSelectedMessageId(null)} 
+            onDelete={() => {
+                onDeleteMessage(selectedMessage.id);
+                setSelectedMessageId(null);
+            }}
             applications={applications}
             onLinkApplication={(appId) => onLinkEmail(selectedMessage, appId)}
+            onCreateApplication={handleCreateApplicationClick}
+         />
+         
+         <CreateApplicationModal 
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onSubmit={handleFinalizeCreateApplication}
+            initialData={draftApplication}
+            isLoading={isParsingEmail}
          />
        </div>
     );
@@ -187,9 +272,9 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
                 <div 
                     key={senderKey}
                     onClick={() => setSelectedMessageId(latest.id)}
-                    className="p-4 border-b border-slate-100 cursor-pointer transition-colors hover:bg-white hover:shadow-sm group"
+                    className="p-4 border-b border-slate-100 cursor-pointer transition-colors hover:bg-white hover:shadow-sm group relative"
                 >
-                    <div className="flex justify-between items-start mb-1">
+                    <div className="flex justify-between items-start mb-1 pr-6">
                         <span className="font-semibold text-sm truncate pr-2 text-slate-900 group-hover:text-indigo-700">
                             {latest.senderName}
                         </span>
@@ -197,7 +282,7 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
                             {new Date(latest.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         </span>
                     </div>
-                    <div className="text-xs font-medium text-slate-700 mb-1 truncate">{latest.subject || '(No Subject)'}</div>
+                    <div className="text-xs font-medium text-slate-700 mb-1 truncate pr-6">{latest.subject || '(No Subject)'}</div>
                     <div className="text-xs text-slate-500 mb-2 truncate">{latest.snippet}</div>
                     
                     <div className="flex items-center gap-2">
@@ -211,6 +296,21 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
                             <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{thread.length} msgs</span>
                          )}
                     </div>
+
+                    {/* Delete Button - Appears on hover */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if(window.confirm('Are you sure you want to delete this message?')) {
+                                onDeleteMessage(latest.id);
+                                if (selectedMessageId === latest.id) setSelectedMessageId(null);
+                            }
+                        }}
+                        className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
+                        title="Delete Message"
+                    >
+                        <Trash2 size={16} />
+                    </button>
                 </div>
                 );
             })

@@ -80,6 +80,10 @@ const App: React.FC = () => {
     setMessages(prev => prev.filter(msg => msg.accountId !== id));
   };
 
+  const handleDeleteMessage = (id: string) => {
+    setMessages(prev => prev.filter(msg => msg.id !== id));
+  };
+
   const handleSyncAccount = async (id: string) => {
     const account = accounts.find(a => a.id === id);
     if (!account) return;
@@ -169,6 +173,8 @@ const App: React.FC = () => {
               const app = applications.find(a => a.id === appId);
               if (app) handleUpdateApplication({ ...app, status });
             }}
+            onAddApplication={handleAddApplication}
+            onDeleteMessage={handleDeleteMessage}
             isScanned={isEmailScanned}
             isScanning={isScanning}
             onScan={handleScanMessages}

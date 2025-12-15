@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { InboundMessage, JobApplication } from '../types';
-import { X, Code, FileText, Link as LinkIcon, Calendar, User, Building2 } from 'lucide-react';
+import { X, Code, FileText, Link as LinkIcon, Calendar, User, Building2, Trash2, PlusCircle } from 'lucide-react';
 import { STATUS_COLORS } from '../constants';
 
 interface MessageViewerProps {
   message: InboundMessage;
   onClose: () => void;
+  onDelete: () => void;
   applications: JobApplication[];
   onLinkApplication: (appId: string) => void;
+  onCreateApplication: () => void;
 }
 
-const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, applications, onLinkApplication }) => {
+const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, onDelete, applications, onLinkApplication, onCreateApplication }) => {
   const [viewMode, setViewMode] = useState<'formatted' | 'raw'>('formatted');
   const [isLinkMode, setIsLinkMode] = useState(false);
 
@@ -48,6 +50,17 @@ const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, applica
           </div>
         </div>
         <div className="flex items-center gap-2">
+           <button 
+             onClick={() => {
+                if(window.confirm("Delete this message?")) {
+                    onDelete();
+                }
+             }}
+             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition"
+             title="Delete"
+           >
+            <Trash2 size={20} />
+           </button>
            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition">
             <X size={20} />
           </button>
@@ -71,45 +84,56 @@ const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, applica
           </button>
         </div>
 
-        <div className="relative">
-           {message.linkedApplicationId ? (
-             <div className="flex items-center gap-2 text-sm text-green-600 font-medium px-3 py-1.5 bg-green-50 rounded-md">
-               <LinkIcon size={14} /> Linked to Application
-             </div>
-           ) : (
-             <button 
-                onClick={() => setIsLinkMode(!isLinkMode)}
-                className="flex items-center gap-2 text-sm text-slate-600 hover:text-indigo-600 px-3 py-1.5 hover:bg-indigo-50 rounded-md transition border border-transparent hover:border-indigo-100"
+        <div className="flex items-center gap-2">
+          {!message.linkedApplicationId && (
+              <button 
+                onClick={onCreateApplication}
+                className="flex items-center gap-2 text-sm text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 px-3 py-1.5 rounded-md transition font-medium"
               >
-                <LinkIcon size={14} /> Link to Application
+                <PlusCircle size={14} /> Create Application
               </button>
            )}
-           
-           {isLinkMode && (
-             <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50">
-               <div className="text-xs font-bold text-slate-400 px-2 py-1 uppercase tracking-wider mb-1">Select Application</div>
-               <div className="max-h-60 overflow-y-auto space-y-1">
-                 {applications.map(app => (
-                   <button 
-                     key={app.id}
-                     onClick={() => {
-                       onLinkApplication(app.id);
-                       setIsLinkMode(false);
-                     }}
-                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-indigo-50 transition flex items-start gap-3 group"
-                   >
-                     <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 shrink-0 mt-0.5">
-                       <Building2 size={16} />
-                     </div>
-                     <div>
-                       <div className="text-sm font-medium text-slate-700 group-hover:text-indigo-700">{app.companyName}</div>
-                       <div className="text-xs text-slate-500">{app.roleTitle}</div>
-                     </div>
-                   </button>
-                 ))}
+
+           <div className="relative">
+             {message.linkedApplicationId ? (
+               <div className="flex items-center gap-2 text-sm text-green-600 font-medium px-3 py-1.5 bg-green-50 rounded-md">
+                 <LinkIcon size={14} /> Linked to Application
                </div>
-             </div>
-           )}
+             ) : (
+               <button 
+                  onClick={() => setIsLinkMode(!isLinkMode)}
+                  className="flex items-center gap-2 text-sm text-slate-600 hover:text-indigo-600 px-3 py-1.5 hover:bg-indigo-50 rounded-md transition border border-transparent hover:border-indigo-100"
+                >
+                  <LinkIcon size={14} /> Link Existing
+                </button>
+             )}
+             
+             {isLinkMode && (
+               <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50">
+                 <div className="text-xs font-bold text-slate-400 px-2 py-1 uppercase tracking-wider mb-1">Select Application</div>
+                 <div className="max-h-60 overflow-y-auto space-y-1">
+                   {applications.map(app => (
+                     <button 
+                       key={app.id}
+                       onClick={() => {
+                         onLinkApplication(app.id);
+                         setIsLinkMode(false);
+                       }}
+                       className="w-full text-left px-3 py-2 rounded-lg hover:bg-indigo-50 transition flex items-start gap-3 group"
+                     >
+                       <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 shrink-0 mt-0.5">
+                         <Building2 size={16} />
+                       </div>
+                       <div>
+                         <div className="text-sm font-medium text-slate-700 group-hover:text-indigo-700">{app.companyName}</div>
+                         <div className="text-xs text-slate-500">{app.roleTitle}</div>
+                       </div>
+                     </button>
+                   ))}
+                 </div>
+               </div>
+             )}
+          </div>
         </div>
       </div>
 

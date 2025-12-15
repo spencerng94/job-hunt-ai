@@ -13,6 +13,14 @@ export interface EmailAnalysisResult {
   reasoning: string;
 }
 
+export interface ExtractedJobDetails {
+  companyName: string;
+  roleTitle: string;
+  jobLink?: string;
+  nextInterviewDate?: string;
+  status: ApplicationStatus;
+}
+
 export const analyzeEmailWithGemini = async (emailText: string, subject: string): Promise<EmailAnalysisResult> => {
   if (!process.env.API_KEY) {
     console.warn("No API Key available for Gemini.");
@@ -88,3 +96,75 @@ export const analyzeEmailWithGemini = async (emailText: string, subject: string)
     };
   }
 };
+
+export const extractJobDetailsFromEmail = async (emailText: string, subject: string): Promise<ExtractedJobDetails> => {
+  if (!process.env.API_KEY) {
+    // Fallback if no API key
+    return {
+      companyName: 'Unknown Company',
+      roleTitle: 'Unknown Role',
+      status: ApplicationStatus.RECRUITER_SCREEN
+    };
+  }
+
+  try {
+     const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `
+        Extract job application details from this email.
+        Subject: ${subject}
+        Body: ${emailText}
+
+        Extract:
+        1. Company Name
+        2. Role/Job Title (Infer if not explicit)
+        3. Job/Career Link (if found in text)
+        4. Next Interview Date (ISO 8601 format if found, e.g. YYYY-MM-DDTHH:MM:SS)
+        5. Current Status based on context (default to 'Recruiter Screen' if unsure).
+           Valid Statuses: ['Application Submitted', 'Recruiter Screen', 'Technical Phone Screen', 'Hiring Manager', 'Onsite', 'Offer', 'Rejected', 'Withdrawn']
+        
+        Return JSON.
+      `,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            companyName: { type: Type.STRING },
+            roleTitle: { type: Type.STRING },
+            jobLink: { type: Type.STRING, nullable: true },
+            nextInterviewDate: { type: Type.STRING, nullable: true },
+            status: { type: Type.STRING },
+          },
+          required: ["companyName", "roleTitle", "status"],
+        }
+      }
+    });
+    
+    const text = response.text;
+    if (!text) throw new Error("No response from Gemini");
+    const result = JSON.parse(text);
+    
+    // Validate Status
+    let status = ApplicationStatus.RECRUITER_SCREEN;
+    if (Object.values(ApplicationStatus).includes(result.status as ApplicationStatus)) {
+        status = result.status as ApplicationStatus;
+    }
+
+    return {
+        companyName: result.companyName || "Unknown Company",
+        roleTitle: result.roleTitle || "Unknown Role",
+        jobLink: result.jobLink || "",
+        nextInterviewDate: result.nextInterviewDate || undefined,
+        status: status
+    };
+
+  } catch (error) {
+    console.error("Gemini Extraction Failed:", error);
+    return {
+      companyName: '',
+      roleTitle: '',
+      status: ApplicationStatus.RECRUITER_SCREEN
+    };
+  }
+}
