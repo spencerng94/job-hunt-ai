@@ -11,7 +11,6 @@ export const fetchGmailMessages = async (accessToken: string, accountId: string,
 
   try {
     // 1. Search for messages
-    // Relaxed query to ensure we find *something* if it exists
     const query = 'subject:(interview OR application OR offer OR schedule) -category:promotions -category:social';
     
     const listResponse = await fetch(
@@ -20,13 +19,32 @@ export const fetchGmailMessages = async (accessToken: string, accountId: string,
     );
     
     if (!listResponse.ok) {
-        const errText = await listResponse.text();
-        console.error("Gmail API List Error:", listResponse.status, errText);
+        let errorData;
+        try {
+            errorData = await listResponse.json();
+        } catch (e) {
+            // If json parse fails, use text fallback in the error message
+            throw new Error(`Gmail API Error: ${listResponse.status} ${listResponse.statusText}`);
+        }
+
+        console.error("Gmail API Error:", errorData);
+
+        const message = errorData.error?.message || JSON.stringify(errorData);
         
         if (listResponse.status === 403) {
-            throw new Error("Gmail API is not enabled. Please enable the 'Gmail API' in your Google Cloud Console.");
+            if (message.includes("Insufficient Permission") || message.includes("scope")) {
+                throw new Error("Gmail permission not granted. Please re-connect your Google account.");
+            }
+            if (message.includes("not enabled") || message.includes("project")) {
+                throw new Error("Gmail API is not enabled for this project.");
+            }
         }
-        throw new Error(`Failed to list messages: ${listResponse.statusText}`);
+        
+        if (listResponse.status === 401) {
+             throw new Error("Access token expired. Please re-connect.");
+        }
+
+        throw new Error(`Failed to list messages: ${message}`);
     }
 
     const listData = await listResponse.json();

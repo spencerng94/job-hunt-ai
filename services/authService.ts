@@ -10,7 +10,7 @@ import { ConnectedAccount, AccountProvider } from '../types';
  *    Simulates the experience for testing/demo purposes.
  */
 
-// Helper to safely access environment variables in both Vite and CRA environments
+// Helper to safely access environment variables (Vite preferred)
 export const getGoogleClientId = (): string | undefined => {
   // 0. Manual Override (LocalStorage) - Allows users to paste ID in UI if env vars fail
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -18,7 +18,7 @@ export const getGoogleClientId = (): string | undefined => {
     if (manualId) return manualId;
   }
 
-  // 1. Try Vite (import.meta.env)
+  // 1. Try Vite (import.meta.env) - Primary Method
   try {
     // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GOOGLE_CLIENT_ID) {
@@ -29,15 +29,6 @@ export const getGoogleClientId = (): string | undefined => {
     // Ignore errors if import.meta is not supported
   }
 
-  // 2. Try Standard Process Env (CRA / Next.js / Custom Webpack)
-  try {
-    if (typeof process !== 'undefined' && process.env) {
-      return process.env.REACT_APP_GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
-    }
-  } catch (e) {
-    // Ignore
-  }
-  
   return undefined;
 };
 
@@ -84,6 +75,7 @@ const initiateAuth = (clientId: string, resolve: (val: ConnectedAccount) => void
     const client = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: GMAIL_SCOPES,
+        prompt: 'consent', // Force re-consent to ensure scopes are granted and avoid 403 errors
         callback: async (tokenResponse: any) => {
           if (tokenResponse.error) {
             console.error("Token Error:", tokenResponse);

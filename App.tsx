@@ -133,9 +133,18 @@ const App: React.FC = () => {
         });
         
       }, 1500); 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Global scan failed", error);
       setIsScanning(false);
+      
+      // Show alerts for specific user-facing errors
+      if (error.message) {
+          if (error.message.includes("Gmail permission") || error.message.includes("Gmail API")) {
+              alert(error.message);
+          } else if (error.message.includes("Access token expired")) {
+              alert("Your Google session has expired. Please reconnect your account.");
+          }
+      }
     }
   };
 
