@@ -2,6 +2,7 @@ import React from 'react';
 import { JobApplication, ApplicationStatus } from '../types';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, LabelList } from 'recharts';
 import { STATUS_COLORS } from '../constants';
+import { Building2 } from 'lucide-react';
 
 interface DashboardProps {
   applications: JobApplication[];
@@ -103,9 +104,21 @@ const Dashboard: React.FC<DashboardProps> = ({ applications }) => {
             ) : (
               upcomingInterviews.map(app => (
                 <div key={app.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 transition hover:border-slate-300">
-                  <div>
-                    <p className="font-medium text-slate-800">{app.companyName}</p>
-                    <p className="text-sm text-slate-500">{app.roleTitle}</p>
+                  <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                        {app.logoUrl ? (
+                            <img 
+                                src={app.logoUrl} 
+                                alt={app.companyName} 
+                                className="w-full h-full object-contain" 
+                                onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement?.classList.add('bg-slate-50'); }}
+                            />
+                        ) : <Building2 size={18} className="text-slate-300" />}
+                     </div>
+                    <div>
+                        <p className="font-medium text-slate-800">{app.companyName}</p>
+                        <p className="text-sm text-slate-500">{app.roleTitle}</p>
+                    </div>
                   </div>
                   <div className="text-right">
                     <div className={`text-xs px-2 py-1 rounded-full inline-block mb-1 ${STATUS_COLORS[app.status]}`}>

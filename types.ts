@@ -25,6 +25,7 @@ export interface JobApplication {
   id: string;
   dateApplied: string;
   companyName: string;
+  logoUrl?: string; // New field for Company Icon
   roleTitle: string;
   jobLink: string;
   

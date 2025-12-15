@@ -1,6 +1,6 @@
 import React from 'react';
 import { JobApplication, ApplicationStatus } from '../types';
-import { Calendar, Clock, MapPin, Video, ExternalLink, Briefcase, CalendarClock, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Video, ExternalLink, Briefcase, CalendarClock, AlertCircle, Building2 } from 'lucide-react';
 import { STATUS_COLORS } from '../constants';
 
 interface UpcomingInterviewsProps {
@@ -92,10 +92,17 @@ const UpcomingInterviews: React.FC<UpcomingInterviewsProps> = ({ applications })
                                 }`}
                             >
                             <div className="flex items-start gap-4">
-                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${
+                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 overflow-hidden ${
                                     group === 'Today' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'
                                 }`}>
-                                <Briefcase size={24} />
+                                    {app.logoUrl ? (
+                                        <img 
+                                            src={app.logoUrl} 
+                                            alt={app.companyName} 
+                                            className="w-full h-full object-contain" 
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement?.classList.add('bg-slate-100'); }}
+                                        />
+                                    ) : <Briefcase size={24} />}
                                 </div>
                                 <div>
                                 <div className="flex items-center gap-3 mb-1">
@@ -155,8 +162,15 @@ const UpcomingInterviews: React.FC<UpcomingInterviewsProps> = ({ applications })
                             className="bg-white p-5 rounded-xl shadow-sm border border-amber-200/60 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-amber-300 transition"
                         >
                             <div className="flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
-                                    <AlertCircle size={24} />
+                                <div className="w-12 h-12 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100 overflow-hidden">
+                                    {app.logoUrl ? (
+                                        <img 
+                                            src={app.logoUrl} 
+                                            alt={app.companyName} 
+                                            className="w-full h-full object-contain" 
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement?.classList.add('bg-amber-50'); }}
+                                        />
+                                    ) : <AlertCircle size={24} />}
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-3 mb-1">

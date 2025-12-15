@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { JobApplication, ApplicationStatus, Note } from '../types';
 import { STATUS_COLORS } from '../constants';
-import { Search, Filter, Briefcase, Plus, Calendar, User, ExternalLink, ChevronRight, CheckCircle, XCircle, Clock, FileText, Sparkles, Loader2, StickyNote, Send } from 'lucide-react';
+import { Search, Filter, Briefcase, Plus, Calendar, User, ExternalLink, ChevronRight, CheckCircle, XCircle, Clock, FileText, Sparkles, Loader2, StickyNote, Send, Building2 } from 'lucide-react';
 import { analyzeJobDescription } from '../services/geminiService';
 
 interface ApplicationManagerProps {
@@ -90,6 +90,30 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
     setSelectedAppId(newApp.id);
   };
 
+  const guessCompanyLogo = (name: string, link: string) => {
+    if (!selectedApp) return;
+    
+    let domain = '';
+    // 1. Try to get domain from link
+    if (link) {
+        try {
+            const url = new URL(link);
+            domain = url.hostname;
+        } catch(e) {}
+    }
+    // 2. Fallback to guessing from name
+    if (!domain && name) {
+        domain = name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
+    }
+
+    if (domain) {
+        const logoUrl = `https://logo.clearbit.com/${domain}`;
+        onUpdateApplication({ ...selectedApp, logoUrl, companyName: name, jobLink: link });
+    } else {
+        onUpdateApplication({ ...selectedApp, companyName: name, jobLink: link });
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-6rem)] gap-6">
       {/* Left: List View */}
@@ -154,9 +178,23 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
                     className={`cursor-pointer transition hover:bg-slate-50 ${selectedAppId === app.id ? 'bg-indigo-50 hover:bg-indigo-50' : ''}`}
                   >
                     <td className="p-3">
-                      <div className="font-medium text-slate-900">{app.roleTitle}</div>
-                      <div className="text-sm text-slate-500">{app.companyName}</div>
-                      {app.needsReview && <span className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded border border-amber-200">Needs Review</span>}
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                            {app.logoUrl ? (
+                                <img 
+                                    src={app.logoUrl} 
+                                    alt={app.companyName} 
+                                    className="w-full h-full object-contain" 
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement?.classList.add('bg-slate-50'); }}
+                                />
+                            ) : <Building2 size={16} className="text-slate-300" />}
+                         </div>
+                         <div>
+                            <div className="font-medium text-slate-900">{app.roleTitle}</div>
+                            <div className="text-sm text-slate-500">{app.companyName}</div>
+                            {app.needsReview && <span className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded border border-amber-200">Needs Review</span>}
+                         </div>
+                      </div>
                     </td>
                     <td className="p-3 hidden sm:table-cell">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[app.status]}`}>
@@ -193,27 +231,44 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
         <div className={`w-full lg:w-1/2 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full animate-fade-in`}>
           <div className="p-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
             <div className="flex-1 min-w-0 mr-4">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-2">
+                 {/* Logo in Detail View */}
+                 <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                    {selectedApp.logoUrl ? (
+                        <img 
+                            src={selectedApp.logoUrl} 
+                            alt={selectedApp.companyName} 
+                            className="w-full h-full object-contain" 
+                            onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement?.classList.add('bg-slate-50'); }}
+                        />
+                    ) : <Building2 size={20} className="text-slate-300" />}
+                 </div>
+                 <div className="flex-1">
+                    <input 
+                        type="text"
+                        className="text-2xl font-bold text-slate-900 bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded px-1 -ml-1 w-full transition-all placeholder:text-slate-300"
+                        value={selectedApp.roleTitle}
+                        onChange={(e) => onUpdateApplication({...selectedApp, roleTitle: e.target.value})}
+                        placeholder="Role Title"
+                    />
+                 </div>
+              </div>
+
+              <div className="flex items-center gap-2">
                 <input 
-                  type="text"
-                  className="text-2xl font-bold text-slate-900 bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded px-1 -ml-1 w-full transition-all placeholder:text-slate-300"
-                  value={selectedApp.roleTitle}
-                  onChange={(e) => onUpdateApplication({...selectedApp, roleTitle: e.target.value})}
-                  placeholder="Role Title"
+                    type="text"
+                    className="text-lg text-slate-600 font-medium bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded px-1 -ml-1 w-full transition-all placeholder:text-slate-300"
+                    value={selectedApp.companyName}
+                    onChange={(e) => onUpdateApplication({...selectedApp, companyName: e.target.value})}
+                    onBlur={(e) => guessCompanyLogo(e.target.value, selectedApp.jobLink || '')}
+                    placeholder="Company Name"
                 />
                 {selectedApp.jobLink && (
                   <a href={selectedApp.jobLink} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-600 shrink-0 p-1">
-                    <ExternalLink size={20} />
+                    <ExternalLink size={18} />
                   </a>
                 )}
               </div>
-              <input 
-                type="text"
-                className="text-lg text-slate-600 font-medium bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded px-1 -ml-1 w-full transition-all placeholder:text-slate-300"
-                value={selectedApp.companyName}
-                onChange={(e) => onUpdateApplication({...selectedApp, companyName: e.target.value})}
-                placeholder="Company Name"
-              />
             </div>
             <button onClick={() => setSelectedAppId(null)} className="lg:hidden text-slate-400 hover:text-slate-600">
               <XCircle size={24} />
@@ -304,6 +359,7 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
                                 placeholder="Paste link (e.g. https://linkedin.com/jobs/...)"
                                 value={selectedApp.jobLink || ''}
                                 onChange={(e) => onUpdateApplication({...selectedApp, jobLink: e.target.value})}
+                                onBlur={(e) => guessCompanyLogo(selectedApp.companyName, e.target.value)}
                             />
                         </div>
                     </div>

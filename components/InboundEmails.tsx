@@ -219,6 +219,8 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
 
   // If a full message is selected, show the Viewer
   if (selectedMessage) {
+    const associatedAccount = accounts.find(a => a.id === selectedMessage.accountId);
+
     return (
        <div className="h-[calc(100vh-8rem)]">
          <button 
@@ -238,6 +240,7 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
             applications={applications}
             onLinkApplication={(appId) => onLinkEmail(selectedMessage, appId)}
             onCreateApplication={handleCreateApplicationClick}
+            currentAccountEmail={associatedAccount?.email}
          />
          
          <CreateApplicationModal 

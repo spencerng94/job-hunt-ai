@@ -11,9 +11,19 @@ interface MessageViewerProps {
   applications: JobApplication[];
   onLinkApplication: (appId: string) => void;
   onCreateApplication: () => void;
+  currentAccountEmail?: string;
 }
 
-const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, onDelete, onReply, applications, onLinkApplication, onCreateApplication }) => {
+const MessageViewer: React.FC<MessageViewerProps> = ({ 
+  message, 
+  onClose, 
+  onDelete, 
+  onReply, 
+  applications, 
+  onLinkApplication, 
+  onCreateApplication,
+  currentAccountEmail
+}) => {
   const [viewMode, setViewMode] = useState<'formatted' | 'raw'>('formatted');
   const [isLinkMode, setIsLinkMode] = useState(false);
   const [isReplyOpen, setIsReplyOpen] = useState(false);
@@ -186,13 +196,18 @@ const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, onDelet
         {/* Inline Reply Editor */}
         {isReplyOpen && (
             <div className="p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] sticky bottom-0 z-10 animate-fade-in-up">
-                <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-semibold text-slate-600">Reply to {message.senderName}</span>
+                <div className="flex justify-between items-start mb-2">
+                    <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-slate-600">Reply to {message.senderName}</span>
+                        {currentAccountEmail && (
+                            <span className="text-xs text-slate-400">Sending as: {currentAccountEmail}</span>
+                        )}
+                    </div>
                     <button onClick={() => setIsReplyOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={16}/></button>
                 </div>
                 <textarea 
                     autoFocus
-                    className="w-full p-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-h-[120px] mb-3 resize-none"
+                    className="w-full p-3 border border-slate-300 rounded-lg text-sm bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-h-[120px] mb-3 resize-none"
                     placeholder="Type your reply..."
                     value={replyBody}
                     onChange={(e) => setReplyBody(e.target.value)}

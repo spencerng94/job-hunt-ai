@@ -17,6 +17,7 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
     companyName: '',
     roleTitle: '',
     jobLink: '',
+    logoUrl: '',
     status: ApplicationStatus.RECRUITER_SCREEN,
     nextInterviewDate: ''
   });
@@ -31,7 +32,23 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Guess logo if not present
+    if (!formData.logoUrl) {
+       let logoUrl = undefined;
+       if (formData.jobLink) {
+          try {
+             const url = new URL(formData.jobLink);
+             logoUrl = `https://logo.clearbit.com/${url.hostname}`;
+          } catch(e) {}
+       }
+       if (!logoUrl && formData.companyName) {
+           const clean = formData.companyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+           logoUrl = `https://logo.clearbit.com/${clean}.com`;
+       }
+       onSubmit({ ...formData, logoUrl });
+    } else {
+       onSubmit(formData);
+    }
   };
 
   // Helper to manage split date/time inputs
@@ -54,6 +71,13 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
     setFormData({ ...formData, nextInterviewDate: `${date}T${time}` });
   };
 
+  const handleCompanyBlur = () => {
+     if (formData.companyName && !formData.logoUrl) {
+        const clean = formData.companyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        setFormData(prev => ({ ...prev, logoUrl: `https://logo.clearbit.com/${clean}.com` }));
+     }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
@@ -74,17 +98,30 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Company Name</label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                <input 
-                  required
-                  className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="e.g. Google"
-                  value={formData.companyName}
-                  onChange={e => setFormData({...formData, companyName: e.target.value})}
-                />
+            <div className="flex gap-4">
+              <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 mt-6">
+                  {formData.logoUrl ? (
+                      <img 
+                        src={formData.logoUrl} 
+                        alt="Logo" 
+                        className="w-full h-full object-contain"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement?.classList.add('bg-slate-100'); }}
+                      />
+                  ) : <Building2 size={24} className="text-slate-300" />}
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Company Name</label>
+                <div className="relative">
+                    <Building2 className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                    <input 
+                    required
+                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="e.g. Google"
+                    value={formData.companyName}
+                    onChange={e => setFormData({...formData, companyName: e.target.value})}
+                    onBlur={handleCompanyBlur}
+                    />
+                </div>
               </div>
             </div>
 

@@ -17,6 +17,7 @@ export interface ExtractedJobDetails {
   jobLink?: string;
   nextInterviewDate?: string;
   status: ApplicationStatus;
+  logoUrl?: string;
 }
 
 export interface JdAnalysisResult {
@@ -63,11 +64,19 @@ const fallbackExtraction = (emailText: string, subject: string): ExtractedJobDet
     }
   }
 
+  // Basic Logo Guessing based on company name
+  let logoUrl = undefined;
+  if (company) {
+     const cleanName = company.toLowerCase().replace(/[^a-z0-9]/g, '');
+     logoUrl = `https://logo.clearbit.com/${cleanName}.com`;
+  }
+
   return {
     companyName: company || 'Unknown Company',
     roleTitle: role || 'Unknown Role',
     status: ApplicationStatus.RECRUITER_SCREEN,
-    jobLink: ''
+    jobLink: '',
+    logoUrl
   };
 };
 
@@ -164,7 +173,7 @@ export const extractJobDetailsFromEmail = async (emailText: string, subject: str
         3. Job/Career Link (if found in text)
         4. Next Interview Date (ISO 8601 format if found, e.g. YYYY-MM-DDTHH:MM:SS)
         5. Current Status based on context (default to 'Recruiter Screen' if unsure).
-           Valid Statuses: ['Application Submitted', 'Recruiter Screen', 'Technical Phone Screen', 'Hiring Manager', 'Onsite', 'Offer', 'Rejected', 'Withdrawn']
+        6. Company Domain (e.g. google.com) to be used for fetching a logo.
         
         Return JSON.
       `,
@@ -178,6 +187,7 @@ export const extractJobDetailsFromEmail = async (emailText: string, subject: str
             jobLink: { type: Type.STRING, nullable: true },
             nextInterviewDate: { type: Type.STRING, nullable: true },
             status: { type: Type.STRING },
+            companyDomain: { type: Type.STRING, nullable: true },
           },
           required: ["companyName", "roleTitle", "status"],
         }
@@ -194,12 +204,23 @@ export const extractJobDetailsFromEmail = async (emailText: string, subject: str
         status = result.status as ApplicationStatus;
     }
 
+    // Construct Logo URL from domain if available
+    let logoUrl = undefined;
+    if (result.companyDomain) {
+      logoUrl = `https://logo.clearbit.com/${result.companyDomain}`;
+    } else if (result.companyName) {
+      // Fallback
+      const cleanName = result.companyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      logoUrl = `https://logo.clearbit.com/${cleanName}.com`;
+    }
+
     return {
         companyName: result.companyName || "Unknown Company",
         roleTitle: result.roleTitle || "Unknown Role",
         jobLink: result.jobLink || "",
         nextInterviewDate: result.nextInterviewDate || undefined,
-        status: status
+        status: status,
+        logoUrl
     };
 
   } catch (error) {
