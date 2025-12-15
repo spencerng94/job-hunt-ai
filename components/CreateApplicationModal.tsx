@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { JobApplication, ApplicationStatus } from '../types';
-import { X, Briefcase, Building2, Link as LinkIcon, Calendar, Check, Loader2 } from 'lucide-react';
+import { X, Briefcase, Building2, Link as LinkIcon, Calendar, Check, Loader2, Clock } from 'lucide-react';
 
 interface CreateApplicationModalProps {
   isOpen: boolean;
@@ -32,6 +32,26 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
+  };
+
+  // Helper to manage split date/time inputs
+  const currentDateTime = formData.nextInterviewDate || '';
+  const [datePart, timePart] = currentDateTime.split('T');
+
+  const handleDateChange = (date: string) => {
+    if (!date) {
+      setFormData({ ...formData, nextInterviewDate: '' });
+      return;
+    }
+    // Default to 10:00 AM if setting date for the first time
+    const time = timePart || '10:00';
+    setFormData({ ...formData, nextInterviewDate: `${date}T${time}` });
+  };
+
+  const handleTimeChange = (time: string) => {
+    // Default to today if setting time without date
+    const date = datePart || new Date().toISOString().split('T')[0];
+    setFormData({ ...formData, nextInterviewDate: `${date}T${time}` });
   };
 
   return (
@@ -82,7 +102,7 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
                   <select 
@@ -95,15 +115,28 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
                     ))}
                   </select>
                 </div>
+                
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Next Interview</label>
-                  <div className="relative">
-                    <input 
-                      type="datetime-local"
-                      className="w-full px-2 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      value={formData.nextInterviewDate ? formData.nextInterviewDate.slice(0, 16) : ''}
-                      onChange={e => setFormData({...formData, nextInterviewDate: e.target.value})}
-                    />
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Next Interview Schedule</label>
+                  <div className="grid grid-cols-5 gap-2">
+                    <div className="col-span-3 relative">
+                      <Calendar className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                      <input 
+                        type="date"
+                        className="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        value={datePart || ''}
+                        onChange={e => handleDateChange(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2 relative">
+                      <Clock className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                      <input 
+                        type="time"
+                        className="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        value={timePart || ''}
+                        onChange={e => handleTimeChange(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
             </div>

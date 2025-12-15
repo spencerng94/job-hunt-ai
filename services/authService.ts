@@ -34,8 +34,8 @@ export const getGoogleClientId = (): string | undefined => {
 
 const GOOGLE_CLIENT_ID = getGoogleClientId();
 
-// Scopes needed for the app - Gmail Readonly is critical for scanning
-const GMAIL_SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+// Scopes needed for the app - 'modify' is needed to trash messages
+const GMAIL_SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 
 export const connectAccount = async (provider: AccountProvider): Promise<ConnectedAccount> => {
   const currentClientId = getGoogleClientId(); // specific check at runtime

@@ -11,7 +11,7 @@ import { JobApplication, ApplicationStatus, InboundMessage, ConnectedAccount } f
 import { INITIAL_APPLICATIONS, MOCK_MESSAGES, MOCK_ACCOUNTS, NEW_INBOUND_MESSAGE } from './constants';
 import { Menu, RefreshCw, Database } from 'lucide-react';
 import { syncAccountData } from './services/authService';
-import { fetchGmailMessages } from './services/gmailService';
+import { fetchGmailMessages, trashGmailMessage } from './services/gmailService';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -80,7 +80,25 @@ const App: React.FC = () => {
     setMessages(prev => prev.filter(msg => msg.accountId !== id));
   };
 
-  const handleDeleteMessage = (id: string) => {
+  const handleDeleteMessage = async (id: string) => {
+    // Check if this is a real message that needs to be deleted from Gmail
+    const messageToDelete = messages.find(m => m.id === id);
+    if (messageToDelete) {
+       const account = accounts.find(a => a.id === messageToDelete.accountId);
+       
+       // Perform API deletion if it's a real Gmail account and we are not in mock mode
+       if (account && account.provider === 'Gmail' && !isMockMode && !account.accessToken.startsWith('mock_')) {
+          try {
+             const success = await trashGmailMessage(account.accessToken, id);
+             if (!success) {
+                console.warn("Failed to move to trash in Gmail API, removing locally only.");
+             }
+          } catch(e) {
+             console.error("Error deleting from Gmail:", e);
+          }
+       }
+    }
+
     setMessages(prev => prev.filter(msg => msg.id !== id));
   };
 

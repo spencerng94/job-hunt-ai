@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { JobApplication, ApplicationStatus, Note } from '../types';
 import { STATUS_COLORS } from '../constants';
-import { Search, Filter, Briefcase, Plus, Calendar, User, ExternalLink, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Filter, Briefcase, Plus, Calendar, User, ExternalLink, ChevronRight, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 interface ApplicationManagerProps {
   applications: JobApplication[];
@@ -44,6 +44,16 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
       };
       onUpdateApplication({ ...selectedApp, notes: [...selectedApp.notes, newNote] });
     }
+  };
+
+  const updateInterviewTime = (date: string, time: string) => {
+    if (!selectedApp) return;
+    if (!date) {
+        onUpdateApplication({ ...selectedApp, nextInterviewDate: undefined });
+        return;
+    }
+    const validTime = time || '10:00';
+    onUpdateApplication({ ...selectedApp, nextInterviewDate: `${date}T${validTime}` });
   };
 
   return (
@@ -185,12 +195,27 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
                <div className="flex items-center gap-2 mb-3 text-slate-800 font-semibold">
                 <Calendar size={18} /> Next Interview
               </div>
-              <input 
-                type="datetime-local"
-                className="bg-white border border-slate-300 text-sm rounded p-2 w-full"
-                value={selectedApp.nextInterviewDate ? selectedApp.nextInterviewDate.slice(0, 16) : ''}
-                onChange={(e) => onUpdateApplication({...selectedApp, nextInterviewDate: e.target.value})}
-              />
+              
+              <div className="flex gap-2">
+                 <div className="relative flex-1">
+                   <Calendar className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                   <input 
+                      type="date"
+                      className="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                      value={selectedApp.nextInterviewDate ? selectedApp.nextInterviewDate.split('T')[0] : ''}
+                      onChange={(e) => updateInterviewTime(e.target.value, selectedApp.nextInterviewDate ? selectedApp.nextInterviewDate.split('T')[1] : '')}
+                   />
+                 </div>
+                 <div className="relative w-1/3">
+                   <Clock className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                   <input 
+                      type="time"
+                      className="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                      value={selectedApp.nextInterviewDate ? selectedApp.nextInterviewDate.split('T')[1] : ''}
+                      onChange={(e) => updateInterviewTime(selectedApp.nextInterviewDate ? selectedApp.nextInterviewDate.split('T')[0] : new Date().toISOString().split('T')[0], e.target.value)}
+                   />
+                 </div>
+              </div>
             </div>
 
             {/* Notes Section */}

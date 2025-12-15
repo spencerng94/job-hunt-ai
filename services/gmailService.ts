@@ -103,6 +103,32 @@ export const fetchGmailMessages = async (
   }
 };
 
+/**
+ * Moves a message to the trash
+ */
+export const trashGmailMessage = async (accessToken: string, messageId: string): Promise<boolean> => {
+  if (accessToken.startsWith('mock_')) return true;
+
+  try {
+    const response = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/trash`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` }
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to trash message", await response.json());
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Gmail Trash Error:", error);
+    return false;
+  }
+};
+
 const parseGmailMessage = (data: any, accountId: string): InboundMessage | null => {
   try {
     const headers = data.payload.headers;
