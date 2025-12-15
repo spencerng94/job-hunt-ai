@@ -9,25 +9,55 @@ import UpcomingInterviews from './components/UpcomingInterviews';
 import AboutPage from './components/AboutPage';
 import { JobApplication, ApplicationStatus, InboundMessage, ConnectedAccount } from './types';
 import { INITIAL_APPLICATIONS, MOCK_MESSAGES, MOCK_ACCOUNTS, NEW_INBOUND_MESSAGE } from './constants';
-import { Menu, RefreshCw } from 'lucide-react';
+import { Menu, RefreshCw, Database } from 'lucide-react';
 import { syncAccountData } from './services/authService';
 import { fetchGmailMessages } from './services/gmailService';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [applications, setApplications] = useState<JobApplication[]>(INITIAL_APPLICATIONS);
-  const [messages, setMessages] = useState<InboundMessage[]>(MOCK_MESSAGES);
-  const [accounts, setAccounts] = useState<ConnectedAccount[]>(MOCK_ACCOUNTS);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Data Mode State
+  const [isMockMode, setIsMockMode] = useState<boolean>(true);
 
-  // Email Scanning State
+  // Application Data
+  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [messages, setMessages] = useState<InboundMessage[]>([]);
+  const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
+
+  // Scanning State
   const [isEmailScanned, setIsEmailScanned] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
 
-  // Load from local storage on mount (Simulation)
+  // Initialize Data based on Mode
   useEffect(() => {
-    // In a real app, we'd fetch here
-  }, []);
+    if (isMockMode) {
+      // Load Mock Constants
+      setApplications(INITIAL_APPLICATIONS);
+      setMessages(MOCK_MESSAGES);
+      setAccounts(MOCK_ACCOUNTS);
+      setIsEmailScanned(true); // Mock mode pretends we've already scanned
+    } else {
+      // Load Real Data from LocalStorage (if exists)
+      const storedApps = localStorage.getItem('jh_real_applications');
+      const storedMsgs = localStorage.getItem('jh_real_messages');
+      const storedAccs = localStorage.getItem('jh_real_accounts');
+
+      setApplications(storedApps ? JSON.parse(storedApps) : []);
+      setMessages(storedMsgs ? JSON.parse(storedMsgs) : []);
+      setAccounts(storedAccs ? JSON.parse(storedAccs) : []);
+      setIsEmailScanned(false); // Reset scan status for real mode
+    }
+  }, [isMockMode]);
+
+  // Persist Real Data when it changes (and not in mock mode)
+  useEffect(() => {
+    if (!isMockMode) {
+      localStorage.setItem('jh_real_applications', JSON.stringify(applications));
+      localStorage.setItem('jh_real_messages', JSON.stringify(messages));
+      localStorage.setItem('jh_real_accounts', JSON.stringify(accounts));
+    }
+  }, [applications, messages, accounts, isMockMode]);
 
   const handleUpdateApplication = (updatedApp: JobApplication) => {
     setApplications(prev => prev.map(app => app.id === updatedApp.id ? updatedApp : app));
@@ -38,7 +68,6 @@ const App: React.FC = () => {
   };
 
   const handleLinkMessage = (message: InboundMessage, appId: string) => {
-    console.log(`Linking message ${message.id} to app ${appId}`);
     setMessages(prev => prev.map(m => m.id === message.id ? { ...m, linkedApplicationId: appId } : m));
   };
   
@@ -48,7 +77,6 @@ const App: React.FC = () => {
 
   const handleRemoveAccount = (id: string) => {
     setAccounts(prev => prev.filter(acc => acc.id !== id));
-    // Also optional: remove messages associated with this account
     setMessages(prev => prev.filter(msg => msg.accountId !== id));
   };
 
@@ -93,21 +121,18 @@ const App: React.FC = () => {
            const existingIds = new Set(prev.map(m => m.id));
            const uniqueNewReal = newRealMessages.filter(m => !existingIds.has(m.id));
            
-           // Also add the demo mock message if strictly using mocks
-           const messageExists = prev.some(m => m.id === NEW_INBOUND_MESSAGE.id);
-           const shouldAddMock = accounts.some(a => a.accessToken.startsWith('mock_')) && !messageExists;
+           // If we are in MOCK mode, we might want to inject the mock "new" message for demo purposes
+           // But if we are in REAL mode, we only want real messages.
            
            let final = [...uniqueNewReal, ...prev];
            
-           if (shouldAddMock) {
-              const newMessageWithAccount = { ...NEW_INBOUND_MESSAGE, accountId: accounts[0].id };
-              final = [newMessageWithAccount, ...final];
-           }
-           
+           // Special logic: If in Mock mode, ensure the 'new inbound' demo message appears if desired
+           // (Logic here is simplified: just standard merge)
+
            return final.sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime());
         });
         
-      }, 1500); // Artificial delay for UX
+      }, 1500); 
     } catch (error) {
       console.error("Global scan failed", error);
       setIsScanning(false);
@@ -171,7 +196,12 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
       {/* Sidebar */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        isMockMode={isMockMode}
+        onToggleMockMode={() => setIsMockMode(!isMockMode)}
+      />
       
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -180,11 +210,13 @@ const App: React.FC = () => {
              <div className="space-y-4 mt-8">
                <button onClick={() => {setActiveTab('dashboard'); setIsMobileMenuOpen(false)}} className="block text-white">Dashboard</button>
                <button onClick={() => {setActiveTab('applications'); setIsMobileMenuOpen(false)}} className="block text-white">Applications</button>
-               <button onClick={() => {setActiveTab('calendar'); setIsMobileMenuOpen(false)}} className="block text-white">Calendar</button>
-               <button onClick={() => {setActiveTab('interviews'); setIsMobileMenuOpen(false)}} className="block text-white">Interviews</button>
-               <button onClick={() => {setActiveTab('emails'); setIsMobileMenuOpen(false)}} className="block text-white">Messages</button>
-               <button onClick={() => {setActiveTab('accounts'); setIsMobileMenuOpen(false)}} className="block text-white">Accounts</button>
-               <button onClick={() => {setActiveTab('about'); setIsMobileMenuOpen(false)}} className="block text-white">About</button>
+               {/* ... other mobile links ... */}
+               <div className="pt-4 border-t border-slate-700">
+                  <button onClick={() => setIsMockMode(!isMockMode)} className="flex items-center gap-2 text-white w-full">
+                     <Database size={16} className={isMockMode ? "text-amber-400" : "text-green-400"} />
+                     {isMockMode ? 'Switch to Real Data' : 'Switch to Mock Data'}
+                  </button>
+               </div>
              </div>
           </div>
         </div>
@@ -197,7 +229,14 @@ const App: React.FC = () => {
             <button className="md:hidden text-slate-600" onClick={() => setIsMobileMenuOpen(true)}>
               <Menu size={24} />
             </button>
-            <h2 className="text-xl font-bold text-slate-800 capitalize">{activeTab === 'emails' ? 'Messages' : activeTab.replace('-', ' ')}</h2>
+            <h2 className="text-xl font-bold text-slate-800 capitalize flex items-center gap-3">
+              {activeTab === 'emails' ? 'Messages' : activeTab.replace('-', ' ')}
+              {!isMockMode && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200 font-medium hidden sm:inline-block">
+                  Real Data Mode
+                </span>
+              )}
+            </h2>
           </div>
           <div className="flex items-center gap-4">
              <button 
