@@ -26,6 +26,8 @@ export const INITIAL_APPLICATIONS: JobApplication[] = [
     companyName: 'TechCorp',
     roleTitle: 'Senior Frontend Engineer',
     jobLink: 'https://techcorp.jobs/123',
+    jobDescription: 'We are looking for a Senior Frontend Engineer to join our core product team...',
+    aiSkills: ['React', 'TypeScript', 'Performance Optimization'],
     status: ApplicationStatus.ONSITE,
     recruiter: { name: 'Sarah Jenkins', email: 'sarah@techcorp.com' },
     notes: [
@@ -89,6 +91,7 @@ export const INITIAL_APPLICATIONS: JobApplication[] = [
 
 export const NEW_INBOUND_MESSAGE: InboundMessage = {
   id: 'msg_new_1',
+  threadId: 'th_1',
   accountId: 'acc_1',
   provider: 'Gmail',
   senderName: 'Emily Davis',
@@ -105,6 +108,7 @@ export const NEW_INBOUND_MESSAGE: InboundMessage = {
 export const MOCK_MESSAGES: InboundMessage[] = [
   {
     id: 'm1',
+    threadId: 'th_2',
     accountId: 'acc_1',
     provider: 'Gmail',
     senderName: 'Sarah Jenkins',

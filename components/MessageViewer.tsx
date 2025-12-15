@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 import { InboundMessage, JobApplication } from '../types';
-import { X, Code, FileText, Link as LinkIcon, Calendar, User, Building2, Trash2, PlusCircle } from 'lucide-react';
+import { X, Code, FileText, Link as LinkIcon, Calendar, User, Building2, Trash2, PlusCircle, Reply, Send, Loader2 } from 'lucide-react';
 import { STATUS_COLORS } from '../constants';
 
 interface MessageViewerProps {
   message: InboundMessage;
   onClose: () => void;
   onDelete: () => void;
+  onReply: (message: InboundMessage, body: string) => Promise<boolean>;
   applications: JobApplication[];
   onLinkApplication: (appId: string) => void;
   onCreateApplication: () => void;
 }
 
-const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, onDelete, applications, onLinkApplication, onCreateApplication }) => {
+const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, onDelete, onReply, applications, onLinkApplication, onCreateApplication }) => {
   const [viewMode, setViewMode] = useState<'formatted' | 'raw'>('formatted');
   const [isLinkMode, setIsLinkMode] = useState(false);
+  const [isReplyOpen, setIsReplyOpen] = useState(false);
+  const [replyBody, setReplyBody] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
 
   // Simple keyword highlighting for formatted view
   const highlightKeywords = (html: string) => {
@@ -25,6 +29,20 @@ const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, onDelet
       processed = processed.replace(regex, '<span class="bg-yellow-200 text-yellow-900 px-1 rounded font-semibold">$1</span>');
     });
     return processed;
+  };
+
+  const handleSendReply = async () => {
+    if (!replyBody.trim()) return;
+    
+    setIsSendingReply(true);
+    const success = await onReply(message, replyBody);
+    setIsSendingReply(false);
+    
+    if (success) {
+        setReplyBody('');
+        setIsReplyOpen(false);
+        alert('Reply Sent Successfully!');
+    }
   };
 
   return (
@@ -85,6 +103,18 @@ const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, onDelet
         </div>
 
         <div className="flex items-center gap-2">
+           {/* Reply Button Toggle */}
+           <button 
+                onClick={() => setIsReplyOpen(!isReplyOpen)}
+                className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-md transition font-medium border ${
+                    isReplyOpen 
+                    ? 'bg-slate-800 text-white border-slate-800' 
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                }`}
+            >
+                <Reply size={14} /> Reply
+           </button>
+
           {!message.linkedApplicationId && (
               <button 
                 onClick={onCreateApplication}
@@ -137,17 +167,56 @@ const MessageViewer: React.FC<MessageViewerProps> = ({ message, onClose, onDelet
         </div>
       </div>
 
-      {/* Body Content */}
-      <div className="flex-1 overflow-y-auto p-8 bg-white">
-        {viewMode === 'formatted' ? (
-          <div 
-            className="prose prose-slate max-w-none text-sm"
-            dangerouslySetInnerHTML={{ __html: highlightKeywords(message.fullBody) }} 
-          />
-        ) : (
-          <pre className="text-xs font-mono text-slate-600 bg-slate-50 p-4 rounded-lg overflow-x-auto whitespace-pre-wrap border border-slate-200">
-            {message.rawContent}
-          </pre>
+      {/* Body Content & Reply Section */}
+      <div className="flex-1 overflow-y-auto bg-slate-50 flex flex-col">
+        {/* Email Content */}
+        <div className="p-8 bg-white shadow-sm mb-4">
+            {viewMode === 'formatted' ? (
+            <div 
+                className="prose prose-slate max-w-none text-sm"
+                dangerouslySetInnerHTML={{ __html: highlightKeywords(message.fullBody) }} 
+            />
+            ) : (
+            <pre className="text-xs font-mono text-slate-600 bg-slate-50 p-4 rounded-lg overflow-x-auto whitespace-pre-wrap border border-slate-200">
+                {message.rawContent}
+            </pre>
+            )}
+        </div>
+
+        {/* Inline Reply Editor */}
+        {isReplyOpen && (
+            <div className="p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] sticky bottom-0 z-10 animate-fade-in-up">
+                <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-semibold text-slate-600">Reply to {message.senderName}</span>
+                    <button onClick={() => setIsReplyOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={16}/></button>
+                </div>
+                <textarea 
+                    autoFocus
+                    className="w-full p-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-h-[120px] mb-3 resize-none"
+                    placeholder="Type your reply..."
+                    value={replyBody}
+                    onChange={(e) => setReplyBody(e.target.value)}
+                />
+                <div className="flex justify-end gap-2">
+                    <button 
+                        onClick={() => setIsReplyOpen(false)}
+                        className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium"
+                    >
+                        Discard
+                    </button>
+                    <button 
+                        onClick={handleSendReply}
+                        disabled={isSendingReply || !replyBody.trim()}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                    >
+                        {isSendingReply ? (
+                            <><Loader2 size={16} className="animate-spin" /> Sending...</>
+                        ) : (
+                            <><Send size={16} /> Send Reply</>
+                        )}
+                    </button>
+                </div>
+            </div>
         )}
       </div>
 

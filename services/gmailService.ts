@@ -129,6 +129,77 @@ export const trashGmailMessage = async (accessToken: string, messageId: string):
   }
 };
 
+/**
+ * Sends a reply to an email via Gmail API
+ */
+export const sendGmailReply = async (
+    accessToken: string, 
+    replyBody: string, 
+    originalMessage: InboundMessage
+  ): Promise<boolean> => {
+    
+    if (accessToken.startsWith('mock_')) {
+        // Simulate delay for mock
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        return true;
+    }
+
+    try {
+        const to = originalMessage.senderEmail;
+        const subject = originalMessage.subject?.toLowerCase().startsWith('re:') 
+            ? originalMessage.subject 
+            : `Re: ${originalMessage.subject}`;
+        const threadId = originalMessage.threadId;
+
+        // Construct raw email compliant with RFC 2822
+        // Note: In a real app, you might want to decode the original 'References' header to append to it
+        const emailLines = [
+            `To: ${to}`,
+            `Subject: ${subject}`,
+            `In-Reply-To: <${originalMessage.id}>`, // Note: Gmail API often handles threading via threadId, but headers help
+            `References: <${originalMessage.id}>`, 
+            'Content-Type: text/plain; charset="UTF-8"',
+            'MIME-Version: 1.0',
+            '',
+            replyBody
+        ];
+
+        const email = emailLines.join('\r\n');
+        
+        // Base64Url Encode
+        const base64EncodedEmail = btoa(unescape(encodeURIComponent(email)))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+
+        const response = await fetch(
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages/send`,
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    raw: base64EncodedEmail,
+                    threadId: threadId // Crucial for threading
+                })
+            }
+        );
+
+        if (!response.ok) {
+            const err = await response.json();
+            console.error("Failed to send reply", err);
+            throw new Error(err.error?.message || "Failed to send email");
+        }
+
+        return true;
+    } catch (e) {
+        console.error("Send Reply Error", e);
+        throw e;
+    }
+};
+
 const parseGmailMessage = (data: any, accountId: string): InboundMessage | null => {
   try {
     const headers = data.payload.headers;
@@ -174,6 +245,7 @@ const parseGmailMessage = (data: any, accountId: string): InboundMessage | null 
 
     return {
       id: data.id,
+      threadId: data.threadId, // Capture Thread ID
       accountId,
       provider: 'Gmail',
       senderName: senderName || 'Unknown',

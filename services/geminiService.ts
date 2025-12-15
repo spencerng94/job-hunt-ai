@@ -19,6 +19,11 @@ export interface ExtractedJobDetails {
   status: ApplicationStatus;
 }
 
+export interface JdAnalysisResult {
+  summary: string;
+  skills: string[];
+}
+
 // Fallback logic for when AI is unavailable
 const fallbackExtraction = (emailText: string, subject: string): ExtractedJobDetails => {
   let company = '';
@@ -201,5 +206,50 @@ export const extractJobDetailsFromEmail = async (emailText: string, subject: str
     console.error("Gemini Extraction Failed:", error);
     // On API error, fallback to regex
     return fallbackExtraction(emailText, subject);
+  }
+}
+
+export const analyzeJobDescription = async (jdText: string, userNotes: string = ''): Promise<JdAnalysisResult> => {
+  if (!process.env.API_KEY) {
+    throw new Error("No API Key configured.");
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `
+        Analyze the following Job Description (JD).
+        Job Description: "${jdText.substring(0, 10000)}"
+        
+        ${userNotes ? `Also consider these user notes about the application: "${userNotes}"` : ''}
+
+        1. Provide a concise summary (max 3 sentences) of what they are looking for, tailored to the user's notes if present.
+        2. Extract a list of the top 5-7 hard and soft skills required.
+
+        Return JSON.
+      `,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            summary: { type: Type.STRING },
+            skills: { 
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            }
+          },
+          required: ["summary", "skills"],
+        }
+      }
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("No response from Gemini");
+    return JSON.parse(text);
+
+  } catch (error) {
+    console.error("JD Analysis Failed", error);
+    throw error;
   }
 }

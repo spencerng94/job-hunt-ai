@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { JobApplication, ApplicationStatus, Note } from '../types';
 import { STATUS_COLORS } from '../constants';
-import { Search, Filter, Briefcase, Plus, Calendar, User, ExternalLink, ChevronRight, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Search, Filter, Briefcase, Plus, Calendar, User, ExternalLink, ChevronRight, CheckCircle, XCircle, Clock, FileText, Sparkles, Loader2 } from 'lucide-react';
+import { analyzeJobDescription } from '../services/geminiService';
 
 interface ApplicationManagerProps {
   applications: JobApplication[];
@@ -13,7 +14,7 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Derived State
   const filteredApps = useMemo(() => {
@@ -56,6 +57,39 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
     onUpdateApplication({ ...selectedApp, nextInterviewDate: `${date}T${validTime}` });
   };
 
+  const handleAnalyzeJD = async () => {
+    if (!selectedApp || !selectedApp.jobDescription) return;
+    setIsAnalyzing(true);
+    try {
+        const notesContext = selectedApp.notes.map(n => n.content).join('\n');
+        const result = await analyzeJobDescription(selectedApp.jobDescription, notesContext);
+        onUpdateApplication({
+            ...selectedApp,
+            aiSummary: result.summary,
+            aiSkills: result.skills
+        });
+    } catch (e) {
+        console.error(e);
+        alert("Failed to analyze job description. Please check your API key.");
+    } finally {
+        setIsAnalyzing(false);
+    }
+  };
+
+  const handleCreateNew = () => {
+    const newApp: JobApplication = {
+      id: `app_${Date.now()}`,
+      dateApplied: new Date().toISOString(),
+      companyName: 'New Company',
+      roleTitle: 'New Role',
+      jobLink: '',
+      status: ApplicationStatus.SUBMITTED,
+      notes: [],
+    };
+    onAddApplication(newApp);
+    setSelectedAppId(newApp.id);
+  };
+
   return (
     <div className="flex h-[calc(100vh-6rem)] gap-6">
       {/* Left: List View */}
@@ -64,7 +98,10 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
         <div className="p-4 border-b border-slate-100 space-y-3">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-bold text-slate-800">Applications</h2>
-            <button className="flex items-center gap-1 bg-slate-900 text-white px-3 py-1.5 rounded-md text-sm hover:bg-slate-800 transition">
+            <button 
+              onClick={handleCreateNew}
+              className="flex items-center gap-1 bg-slate-900 text-white px-3 py-1.5 rounded-md text-sm hover:bg-slate-800 transition"
+            >
               <Plus size={16} /> New
             </button>
           </div>
@@ -230,6 +267,78 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
                    />
                  </div>
               </div>
+            </div>
+
+            {/* Job Description & AI Analysis */}
+            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <div className="flex items-center gap-2 text-slate-800 font-semibold">
+                        <FileText size={18} /> Job Description & Insights
+                    </div>
+                </div>
+                
+                <div className="p-4 space-y-4">
+                    {/* Link Input */}
+                    <div className="relative">
+                        <ExternalLink className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                        <input 
+                            type="text"
+                            className="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="Paste Job Description URL (e.g. https://linkedin.com/jobs/...)"
+                            value={selectedApp.jobLink || ''}
+                            onChange={(e) => onUpdateApplication({...selectedApp, jobLink: e.target.value})}
+                        />
+                    </div>
+                    
+                    {/* JD Textarea */}
+                    <textarea 
+                        className="w-full h-32 p-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y"
+                        placeholder="Paste the full Job Description text here..."
+                        value={selectedApp.jobDescription || ''}
+                        onChange={(e) => onUpdateApplication({...selectedApp, jobDescription: e.target.value})}
+                    />
+
+                    {/* AI Button */}
+                    <button 
+                        onClick={handleAnalyzeJD}
+                        disabled={isAnalyzing || !selectedApp.jobDescription}
+                        className={`w-full py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition ${
+                            !selectedApp.jobDescription 
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
+                        }`}
+                    >
+                        {isAnalyzing ? (
+                            <><Loader2 className="animate-spin" size={16} /> Analyzing...</>
+                        ) : (
+                            <><Sparkles size={16} /> Analyze with AI</>
+                        )}
+                    </button>
+                    
+                    {/* Results */}
+                    {(selectedApp.aiSummary || (selectedApp.aiSkills && selectedApp.aiSkills.length > 0)) && (
+                        <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-100 animate-fade-in">
+                            {selectedApp.aiSummary && (
+                                <div className="mb-4">
+                                    <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-wider mb-2">Summary</h4>
+                                    <p className="text-sm text-slate-700 leading-relaxed">{selectedApp.aiSummary}</p>
+                                </div>
+                            )}
+                            {selectedApp.aiSkills && selectedApp.aiSkills.length > 0 && (
+                                <div>
+                                    <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-wider mb-2">Key Skills</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedApp.aiSkills.map((skill, i) => (
+                                            <span key={i} className="bg-white text-indigo-700 px-2 py-1 rounded text-xs font-medium border border-indigo-100 shadow-sm">
+                                                {skill}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Notes Section */}

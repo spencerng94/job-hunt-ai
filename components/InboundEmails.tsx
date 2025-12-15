@@ -12,6 +12,7 @@ interface InboundEmailsProps {
   onUpdateAppStatus: (appId: string, status: ApplicationStatus) => void;
   onAddApplication: (app: JobApplication) => void;
   onDeleteMessage: (id: string) => void;
+  onReply: (message: InboundMessage, body: string) => Promise<boolean>;
   isScanned: boolean;
   isScanning: boolean;
   onScan: (timeWindow: string) => void;
@@ -21,9 +22,10 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
   emails, 
   applications, 
   onLinkEmail, 
-  onUpdateAppStatus,
+  onUpdateAppStatus, 
   onAddApplication,
   onDeleteMessage,
+  onReply,
   isScanned,
   isScanning,
   onScan
@@ -198,6 +200,7 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
                 onDeleteMessage(selectedMessage.id);
                 setSelectedMessageId(null);
             }}
+            onReply={onReply}
             applications={applications}
             onLinkApplication={(appId) => onLinkEmail(selectedMessage, appId)}
             onCreateApplication={handleCreateApplicationClick}
@@ -282,14 +285,21 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
                     className="p-4 border-b border-slate-100 cursor-pointer transition-colors hover:bg-white hover:shadow-sm group relative"
                 >
                     <div className="flex justify-between items-start mb-1 pr-6">
-                        <span className="font-semibold text-sm truncate pr-2 text-slate-900 group-hover:text-indigo-700">
-                            {latest.senderName}
-                        </span>
-                        <span className="text-xs text-slate-400 whitespace-nowrap">
+                        <div className="flex flex-col min-w-0 pr-2 overflow-hidden">
+                            <span className="font-semibold text-sm truncate text-slate-900 group-hover:text-indigo-700">
+                                {latest.senderName}
+                            </span>
+                            {latest.senderEmail && (
+                                <span className="text-[11px] text-slate-400 truncate">
+                                    {latest.senderEmail}
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0 mt-0.5">
                             {new Date(latest.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         </span>
                     </div>
-                    <div className="text-xs font-medium text-slate-700 mb-1 truncate pr-6">{latest.subject || '(No Subject)'}</div>
+                    <div className="text-xs font-medium text-slate-700 mb-1 truncate pr-6 mt-1">{latest.subject || '(No Subject)'}</div>
                     <div className="text-xs text-slate-500 mb-2 truncate">{latest.snippet}</div>
                     
                     <div className="flex items-center gap-2">

@@ -11,7 +11,7 @@ import { JobApplication, ApplicationStatus, InboundMessage, ConnectedAccount } f
 import { INITIAL_APPLICATIONS, MOCK_MESSAGES, MOCK_ACCOUNTS, NEW_INBOUND_MESSAGE } from './constants';
 import { Menu, RefreshCw, Database } from 'lucide-react';
 import { syncAccountData } from './services/authService';
-import { fetchGmailMessages, trashGmailMessage } from './services/gmailService';
+import { fetchGmailMessages, trashGmailMessage, sendGmailReply } from './services/gmailService';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -100,6 +100,23 @@ const App: React.FC = () => {
     }
 
     setMessages(prev => prev.filter(msg => msg.id !== id));
+  };
+
+  const handleReplyMessage = async (message: InboundMessage, body: string): Promise<boolean> => {
+     const account = accounts.find(a => a.id === message.accountId);
+     if (!account) {
+         alert("Could not find the account associated with this message.");
+         return false;
+     }
+
+     try {
+         await sendGmailReply(account.accessToken, body, message);
+         return true;
+     } catch (e: any) {
+         console.error("Failed to send reply:", e);
+         alert(`Failed to send email: ${e.message}`);
+         return false;
+     }
   };
 
   const handleSyncAccount = async (id: string) => {
@@ -193,6 +210,7 @@ const App: React.FC = () => {
             }}
             onAddApplication={handleAddApplication}
             onDeleteMessage={handleDeleteMessage}
+            onReply={handleReplyMessage}
             isScanned={isEmailScanned}
             isScanning={isScanning}
             onScan={handleScanMessages}

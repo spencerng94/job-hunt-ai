@@ -27,6 +27,12 @@ export interface JobApplication {
   companyName: string;
   roleTitle: string;
   jobLink: string;
+  
+  // New Fields for JD & AI
+  jobDescription?: string;
+  aiSummary?: string;
+  aiSkills?: string[];
+
   status: ApplicationStatus;
   recruiter?: RecruiterInfo;
   notes: Note[];
@@ -38,6 +44,7 @@ export type AccountProvider = 'Gmail';
 
 export interface InboundMessage {
   id: string;
+  threadId?: string; // Gmail Thread ID
   accountId: string; // Linked to ConnectedAccount.id
   provider: AccountProvider;
   senderName: string;
