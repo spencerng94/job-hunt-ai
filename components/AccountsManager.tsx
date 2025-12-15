@@ -14,8 +14,27 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ accounts, onAddAccoun
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Check for either CRA or Vite env var
-  const hasGoogleClientId = !!(process.env.REACT_APP_GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID);
+  // Helper to safely access environment variables in both Vite and CRA environments
+  const checkGoogleClientId = () => {
+    // 1. Try Vite (import.meta.env)
+    try {
+      // @ts-ignore
+      if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+        return true;
+      }
+    } catch (e) {}
+
+    // 2. Try Standard Process Env (CRA / Next.js)
+    try {
+      if (typeof process !== 'undefined' && process.env) {
+        return !!(process.env.REACT_APP_GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID);
+      }
+    } catch (e) {}
+    
+    return false;
+  };
+  
+  const hasGoogleClientId = checkGoogleClientId();
 
   const handleSync = (id: string) => {
     setSyncingId(id);
@@ -66,9 +85,9 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ accounts, onAddAccoun
           <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={18} />
           <div className="text-sm text-amber-800">
             <strong>Running in Mock Mode:</strong> Real Gmail OAuth requires a Client ID. 
-            To enable real auth, add <code>REACT_APP_GOOGLE_CLIENT_ID</code> (or <code>VITE_GOOGLE_CLIENT_ID</code>) to your <code>.env</code> file.
+            To enable real auth, add <code>VITE_GOOGLE_CLIENT_ID</code> (Vite) or <code>REACT_APP_GOOGLE_CLIENT_ID</code> (CRA) to your <code>.env</code> file.
             <br />
-            <span className="text-xs opacity-75">LinkedIn connection is simulated as it requires a backend server for secure OAuth.</span>
+            <span className="text-xs opacity-75">Make sure to restart your dev server after updating the .env file!</span>
           </div>
         </div>
       )}

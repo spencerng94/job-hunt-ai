@@ -10,8 +10,32 @@ import { ConnectedAccount, AccountProvider } from '../types';
  *    Simulates the experience for testing/demo purposes.
  */
 
-// Support both Vite and CRA environment variable patterns
-const GOOGLE_CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || process.env.REACT_APP_GOOGLE_CLIENT_ID;
+// Helper to safely access environment variables in both Vite and CRA environments
+const getGoogleClientId = () => {
+  // 1. Try Vite (import.meta.env)
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+      // @ts-ignore
+      return import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    }
+  } catch (e) {
+    // Ignore errors if import.meta is not supported
+  }
+
+  // 2. Try Standard Process Env (CRA / Next.js / Custom Webpack)
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      return process.env.REACT_APP_GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+    }
+  } catch (e) {
+    // Ignore
+  }
+  
+  return undefined;
+};
+
+const GOOGLE_CLIENT_ID = getGoogleClientId();
 
 // Scopes needed for the app - Gmail Readonly is critical for scanning
 const GMAIL_SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
