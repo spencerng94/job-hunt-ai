@@ -4,14 +4,20 @@ import { ConnectedAccount, AccountProvider } from '../types';
  * Authentication Service
  * 
  * Supports two modes:
- * 1. REAL MODE: Requires a Google Client ID in .env file.
+ * 1. REAL MODE: Requires a Google Client ID in .env file or LocalStorage.
  *    Uses Google Identity Services (GIS) for actual OAuth flow.
  * 2. MOCK MODE: Default if no Client ID is found.
  *    Simulates the experience for testing/demo purposes.
  */
 
 // Helper to safely access environment variables in both Vite and CRA environments
-const getGoogleClientId = () => {
+export const getGoogleClientId = (): string | undefined => {
+  // 0. Manual Override (LocalStorage) - Allows users to paste ID in UI if env vars fail
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const manualId = localStorage.getItem('jh_google_client_id');
+    if (manualId) return manualId;
+  }
+
   // 1. Try Vite (import.meta.env)
   try {
     // @ts-ignore
@@ -41,8 +47,10 @@ const GOOGLE_CLIENT_ID = getGoogleClientId();
 const GMAIL_SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 
 export const connectAccount = async (provider: AccountProvider): Promise<ConnectedAccount> => {
-  if (provider === 'Gmail' && GOOGLE_CLIENT_ID) {
-    return connectRealGoogleAccount();
+  const currentClientId = getGoogleClientId(); // specific check at runtime
+  
+  if (provider === 'Gmail' && currentClientId) {
+    return connectRealGoogleAccount(currentClientId);
   }
   
   // LinkedIn API requires server-side OAuth (Client Secret cannot be exposed).
@@ -52,34 +60,40 @@ export const connectAccount = async (provider: AccountProvider): Promise<Connect
 
 // --- REAL GOOGLE OAUTH IMPLEMENTATION ---
 
-const connectRealGoogleAccount = (): Promise<ConnectedAccount> => {
+const connectRealGoogleAccount = (clientId: string): Promise<ConnectedAccount> => {
   return new Promise((resolve, reject) => {
     try {
       if (!window.google) {
         // Retry once if script hasn't loaded yet
         setTimeout(() => {
              if (!window.google) reject(new Error("Google Identity Services script not loaded. Check your internet connection."));
-             else initiateAuth(resolve, reject);
+             else initiateAuth(clientId, resolve, reject);
         }, 1000);
         return;
       }
-      initiateAuth(resolve, reject);
+      initiateAuth(clientId, resolve, reject);
     } catch (error) {
       console.error("OAuth Initialization Error:", error);
-      resolve(connectMockAccount('Gmail'));
+      // Fallback to mock if critical failure, or reject
+      reject(error);
     }
   });
 };
 
-const initiateAuth = (resolve: (val: ConnectedAccount) => void, reject: (reason: any) => void) => {
+const initiateAuth = (clientId: string, resolve: (val: ConnectedAccount) => void, reject: (reason: any) => void) => {
     const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID!,
+        client_id: clientId,
         scope: GMAIL_SCOPES,
         callback: async (tokenResponse: any) => {
           if (tokenResponse.error) {
             console.error("Token Error:", tokenResponse);
             reject(tokenResponse.error);
             return;
+          }
+
+          if (!tokenResponse.access_token) {
+             reject(new Error("No access token received from Google."));
+             return;
           }
 
           // Token received, now fetch user profile

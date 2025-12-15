@@ -11,16 +11,30 @@ export const fetchGmailMessages = async (accessToken: string, accountId: string,
 
   try {
     // 1. Search for messages
+    // Relaxed query to ensure we find *something* if it exists
     const query = 'subject:(interview OR application OR offer OR schedule) -category:promotions -category:social';
+    
     const listResponse = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=${limit}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     
-    if (!listResponse.ok) throw new Error('Failed to list messages');
+    if (!listResponse.ok) {
+        const errText = await listResponse.text();
+        console.error("Gmail API List Error:", listResponse.status, errText);
+        
+        if (listResponse.status === 403) {
+            throw new Error("Gmail API is not enabled. Please enable the 'Gmail API' in your Google Cloud Console.");
+        }
+        throw new Error(`Failed to list messages: ${listResponse.statusText}`);
+    }
+
     const listData = await listResponse.json();
     
-    if (!listData.messages || listData.messages.length === 0) return [];
+    if (!listData.messages || listData.messages.length === 0) {
+        console.log("No messages found matching query.");
+        return [];
+    }
 
     // 2. Fetch full details for each message
     const messages: InboundMessage[] = [];
@@ -35,13 +49,15 @@ export const fetchGmailMessages = async (accessToken: string, accountId: string,
         const data = await detailResponse.json();
         const parsed = parseGmailMessage(data, accountId);
         if (parsed) messages.push(parsed);
+      } else {
+        console.warn(`Failed to fetch details for message ${msg.id}`);
       }
     }
 
     return messages;
   } catch (error) {
-    console.error("Gmail Fetch Error:", error);
-    return [];
+    console.error("Gmail Fetch Service Error:", error);
+    throw error; // Re-throw to be caught by UI
   }
 };
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ConnectedAccount } from '../types';
 import { Mail, Linkedin, Globe, Trash2, RefreshCw, Plus, CheckCircle2, AlertCircle, ShieldCheck, ExternalLink, Clock } from 'lucide-react';
 import ConnectAccountModal from './ConnectAccountModal';
+import { getGoogleClientId } from '../services/authService';
 
 interface AccountsManagerProps {
   accounts: ConnectedAccount[];
@@ -14,27 +15,8 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ accounts, onAddAccoun
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Helper to safely access environment variables in both Vite and CRA environments
-  const checkGoogleClientId = () => {
-    // 1. Try Vite (import.meta.env)
-    try {
-      // @ts-ignore
-      if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GOOGLE_CLIENT_ID) {
-        return true;
-      }
-    } catch (e) {}
-
-    // 2. Try Standard Process Env (CRA / Next.js)
-    try {
-      if (typeof process !== 'undefined' && process.env) {
-        return !!(process.env.REACT_APP_GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID);
-      }
-    } catch (e) {}
-    
-    return false;
-  };
-  
-  const hasGoogleClientId = checkGoogleClientId();
+  // Use shared logic from service
+  const hasGoogleClientId = !!getGoogleClientId();
 
   const handleSync = (id: string) => {
     setSyncingId(id);
@@ -87,7 +69,7 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ accounts, onAddAccoun
             <strong>Running in Mock Mode:</strong> Real Gmail OAuth requires a Client ID. 
             To enable real auth, add <code>VITE_GOOGLE_CLIENT_ID</code> (Vite) or <code>REACT_APP_GOOGLE_CLIENT_ID</code> (CRA) to your <code>.env</code> file.
             <br />
-            <span className="text-xs opacity-75">Make sure to restart your dev server after updating the .env file!</span>
+            <span className="text-xs opacity-75">If environment variables aren't working, click "Connect Account" and enter your Client ID manually.</span>
           </div>
         </div>
       )}
