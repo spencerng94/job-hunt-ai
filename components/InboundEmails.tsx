@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { InboundMessage, JobApplication, ApplicationStatus } from '../types';
 import { extractJobDetailsFromEmail } from '../services/geminiService';
-import { Mail, RefreshCw, Inbox, CalendarClock, Trash2, Search } from 'lucide-react';
+import { Mail, RefreshCw, Inbox, CalendarClock, Trash2, Search, X } from 'lucide-react';
 import MessageViewer from './MessageViewer';
 import CreateApplicationModal from './CreateApplicationModal';
 
@@ -33,22 +33,54 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [timeWindow, setTimeWindow] = useState<string>('30d');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSender, setSelectedSender] = useState<string | null>(null);
   
   // Create Application Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isParsingEmail, setIsParsingEmail] = useState(false);
   const [draftApplication, setDraftApplication] = useState<Partial<JobApplication> | null>(null);
 
-  // Filter messages based on search term (Sender Name or Email)
-  const filteredMessages = useMemo(() => {
-    if (!searchTerm.trim()) return emails;
+  // Extract unique senders for the filter chips
+  const uniqueSenders = useMemo(() => {
+    const senderMap = new Map<string, { email: string; name: string; count: number }>();
     
-    const lowerTerm = searchTerm.toLowerCase();
-    return emails.filter(msg => 
-      (msg.senderName && msg.senderName.toLowerCase().includes(lowerTerm)) || 
-      (msg.senderEmail && msg.senderEmail.toLowerCase().includes(lowerTerm))
-    );
-  }, [emails, searchTerm]);
+    emails.forEach(msg => {
+      const email = msg.senderEmail;
+      if (!email) return;
+      
+      if (!senderMap.has(email)) {
+        senderMap.set(email, { email, name: msg.senderName, count: 0 });
+      }
+      senderMap.get(email)!.count++;
+    });
+
+    // Sort by frequency, then name
+    return Array.from(senderMap.values()).sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.name.localeCompare(b.name);
+    });
+  }, [emails]);
+
+  // Filter messages based on search term AND selected sender
+  const filteredMessages = useMemo(() => {
+    let result = emails;
+
+    // Filter by Sender
+    if (selectedSender) {
+        result = result.filter(msg => msg.senderEmail === selectedSender);
+    }
+
+    // Filter by Search
+    if (searchTerm.trim()) {
+      const lowerTerm = searchTerm.toLowerCase();
+      result = result.filter(msg => 
+        (msg.senderName && msg.senderName.toLowerCase().includes(lowerTerm)) || 
+        (msg.senderEmail && msg.senderEmail.toLowerCase().includes(lowerTerm))
+      );
+    }
+    
+    return result;
+  }, [emails, searchTerm, selectedSender]);
 
   // Group messages by sender to create "chains"
   const groupedMessages = useMemo(() => {
@@ -248,8 +280,9 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
                    </button>
                 </div>
             </div>
+            
             {/* Search Input */}
-            <div className="px-4 pb-4">
+            <div className="px-4 pb-3">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
                 <input 
@@ -261,14 +294,47 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
                 />
               </div>
             </div>
+
+            {/* Sender Filter Chips */}
+            <div className="px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar mask-gradient">
+                <button 
+                    onClick={() => setSelectedSender(null)}
+                    className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors border ${
+                        !selectedSender 
+                        ? 'bg-indigo-600 text-white border-indigo-600' 
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
+                >
+                    All
+                </button>
+                {uniqueSenders.map(sender => (
+                    <button 
+                        key={sender.email}
+                        onClick={() => setSelectedSender(selectedSender === sender.email ? null : sender.email)}
+                        className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors border flex items-center gap-1 ${
+                            selectedSender === sender.email
+                            ? 'bg-indigo-100 text-indigo-700 border-indigo-200' 
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                        }`}
+                        title={sender.email}
+                    >
+                        {sender.name || sender.email.split('@')[0]}
+                        <span className={`text-[10px] py-0.5 px-1.5 rounded-full ${
+                             selectedSender === sender.email ? 'bg-indigo-200 text-indigo-800' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                            {sender.count}
+                        </span>
+                    </button>
+                ))}
+            </div>
         </div>
 
         {/* Message List */}
         <div className="overflow-y-auto flex-1">
           {sortedSenders.length === 0 ? (
              <div className="p-8 text-center text-slate-400">
-               {searchTerm ? (
-                 <p>No messages matching "{searchTerm}".</p>
+               {searchTerm || selectedSender ? (
+                 <p>No messages matching your filters.</p>
                ) : (
                  <p>No messages found in the last {timeWindow === '3m' ? '3 Months' : timeWindow === '7d' ? '7 Days' : '30 Days'}.</p>
                )}

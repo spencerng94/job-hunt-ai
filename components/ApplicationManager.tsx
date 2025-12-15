@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { JobApplication, ApplicationStatus, Note } from '../types';
 import { STATUS_COLORS } from '../constants';
-import { Search, Filter, Briefcase, Plus, Calendar, User, ExternalLink, ChevronRight, CheckCircle, XCircle, Clock, FileText, Sparkles, Loader2 } from 'lucide-react';
+import { Search, Filter, Briefcase, Plus, Calendar, User, ExternalLink, ChevronRight, CheckCircle, XCircle, Clock, FileText, Sparkles, Loader2, StickyNote, Send } from 'lucide-react';
 import { analyzeJobDescription } from '../services/geminiService';
 
 interface ApplicationManagerProps {
@@ -227,13 +227,13 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input 
-                  className="bg-white border border-slate-300 text-sm rounded p-2 w-full" 
+                  className="bg-white border border-slate-300 text-sm rounded p-2 w-full text-slate-900 placeholder:text-slate-400" 
                   placeholder="Name" 
                   value={selectedApp.recruiter?.name || ''} 
                   onChange={(e) => onUpdateApplication({...selectedApp, recruiter: {...selectedApp.recruiter, name: e.target.value}})}
                 />
                  <input 
-                  className="bg-white border border-slate-300 text-sm rounded p-2 w-full" 
+                  className="bg-white border border-slate-300 text-sm rounded p-2 w-full text-slate-900 placeholder:text-slate-400" 
                   placeholder="Email" 
                   value={selectedApp.recruiter?.email || ''} 
                   onChange={(e) => onUpdateApplication({...selectedApp, recruiter: {...selectedApp.recruiter, email: e.target.value}})}
@@ -252,7 +252,7 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
                    <Calendar className="absolute left-3 top-2.5 text-slate-400" size={16} />
                    <input 
                       type="date"
-                      className="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                      className="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg text-sm bg-white text-slate-900"
                       value={selectedApp.nextInterviewDate ? selectedApp.nextInterviewDate.split('T')[0] : ''}
                       onChange={(e) => updateInterviewTime(e.target.value, selectedApp.nextInterviewDate ? selectedApp.nextInterviewDate.split('T')[1] : '')}
                    />
@@ -261,7 +261,7 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
                    <Clock className="absolute left-3 top-2.5 text-slate-400" size={16} />
                    <input 
                       type="time"
-                      className="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                      className="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg text-sm bg-white text-slate-900"
                       value={selectedApp.nextInterviewDate ? selectedApp.nextInterviewDate.split('T')[1] : ''}
                       onChange={(e) => updateInterviewTime(selectedApp.nextInterviewDate ? selectedApp.nextInterviewDate.split('T')[0] : new Date().toISOString().split('T')[0], e.target.value)}
                    />
@@ -279,24 +279,30 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
                 
                 <div className="p-4 space-y-4">
                     {/* Link Input */}
-                    <div className="relative">
-                        <ExternalLink className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                        <input 
-                            type="text"
-                            className="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Paste Job Description URL (e.g. https://linkedin.com/jobs/...)"
-                            value={selectedApp.jobLink || ''}
-                            onChange={(e) => onUpdateApplication({...selectedApp, jobLink: e.target.value})}
-                        />
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Job Description URL</label>
+                        <div className="relative">
+                            <ExternalLink className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                            <input 
+                                type="text"
+                                className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm"
+                                placeholder="Paste link (e.g. https://linkedin.com/jobs/...)"
+                                value={selectedApp.jobLink || ''}
+                                onChange={(e) => onUpdateApplication({...selectedApp, jobLink: e.target.value})}
+                            />
+                        </div>
                     </div>
                     
                     {/* JD Textarea */}
-                    <textarea 
-                        className="w-full h-32 p-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y"
-                        placeholder="Paste the full Job Description text here..."
-                        value={selectedApp.jobDescription || ''}
-                        onChange={(e) => onUpdateApplication({...selectedApp, jobDescription: e.target.value})}
-                    />
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Full Job Description</label>
+                        <textarea 
+                            className="w-full h-40 p-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm resize-y leading-relaxed"
+                            placeholder="Paste the full Job Description text here..."
+                            value={selectedApp.jobDescription || ''}
+                            onChange={(e) => onUpdateApplication({...selectedApp, jobDescription: e.target.value})}
+                        />
+                    </div>
 
                     {/* AI Button */}
                     <button 
@@ -343,28 +349,42 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
 
             {/* Notes Section */}
             <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">Notes</h3>
-              <div className="space-y-3 mb-3">
-                {selectedApp.notes.map(note => (
-                  <div key={note.id} className="bg-amber-50 p-3 rounded border border-amber-100 text-sm text-slate-800">
-                    <p>{note.content}</p>
-                    <p className="text-xs text-slate-400 mt-1">{new Date(note.date).toLocaleString()}</p>
-                  </div>
-                ))}
+              <div className="flex items-center gap-2 text-slate-800 font-semibold mb-3">
+                 <StickyNote size={18} /> Notes
               </div>
-              <div className="flex gap-2">
-                <input 
-                  id="new-note-input"
-                  type="text" 
-                  placeholder="Add a note..." 
-                  className="flex-1 border border-slate-300 rounded p-2 text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddNote(e.currentTarget.value);
-                      e.currentTarget.value = '';
-                    }
-                  }}
-                />
+              
+              <div className="space-y-3 mb-4">
+                {selectedApp.notes.length === 0 ? (
+                    <div className="p-6 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                        <p className="text-sm text-slate-400 italic">No notes added yet.</p>
+                    </div>
+                ) : (
+                    selectedApp.notes.map(note => (
+                    <div key={note.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm text-slate-800 transition hover:border-slate-300">
+                        <p className="leading-relaxed whitespace-pre-wrap">{note.content}</p>
+                        <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-50">
+                             <p className="text-xs text-slate-400">{new Date(note.date).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    ))
+                )}
+              </div>
+              
+              <div className="flex gap-2 items-start">
+                <div className="relative flex-1">
+                    <input 
+                    id="new-note-input"
+                    type="text" 
+                    placeholder="Type a note and press Enter..." 
+                    className="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm"
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                        handleAddNote(e.currentTarget.value);
+                        e.currentTarget.value = '';
+                        }
+                    }}
+                    />
+                </div>
                 <button 
                   onClick={() => {
                     const input = document.getElementById('new-note-input') as HTMLInputElement;
@@ -373,9 +393,9 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
                       input.value = '';
                     }
                   }}
-                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded text-sm font-medium"
+                  className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-3 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2"
                 >
-                  Add
+                  <Send size={16} /> Add
                 </button>
               </div>
             </div>
