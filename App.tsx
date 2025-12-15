@@ -132,6 +132,29 @@ const App: React.FC = () => {
           const gmailMsgs = await fetchGmailMessages(acc.accessToken, acc.id, 20, timeWindow);
           newRealMessages = [...newRealMessages, ...gmailMsgs];
         }
+        
+        // 3. Generate Mock LinkedIn messages if connected (even in real mode)
+        // This ensures the "LinkedIn (Simulated)" experience yields results
+        if (acc.provider === 'LinkedIn') {
+            const mockLinkedIn: InboundMessage = {
+                id: `msg_li_${Date.now()}_${acc.id.substr(-4)}`,
+                accountId: acc.id,
+                provider: 'LinkedIn',
+                senderName: 'Tech Recruiter',
+                subject: 'Opportunity at Stealth Startup',
+                snippet: 'Hi, I came across your profile and was impressed by your experience...',
+                fullBody: 'Hi, I came across your profile and was impressed by your experience. We are a stealth startup looking for founding engineers. Would you be open to a quick chat?',
+                rawContent: '{}',
+                receivedAt: new Date().toISOString(),
+                link: '#',
+                isRead: false
+            };
+            // Only add if we don't already have some messages from this account to avoid spamming duplicates on every scan
+            const existing = messages.filter(m => m.accountId === acc.id);
+            if (existing.length < 5) {
+                newRealMessages.push(mockLinkedIn);
+            }
+        }
       }
       
       setTimeout(() => {

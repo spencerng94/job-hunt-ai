@@ -132,10 +132,45 @@ const fetchUserProfile = async (accessToken: string) => {
 
 const connectMockAccount = async (provider: AccountProvider): Promise<ConnectedAccount> => {
   return new Promise((resolve) => {
-    // Simulate network delay and user interaction time (popup duration)
-    const delay = provider === 'LinkedIn' ? 1500 : 1000;
+    // Simulate a real popup window flow to make it feel authentic
+    const width = 500;
+    const height = 600;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+    
+    let popup: Window | null = null;
+    try {
+        popup = window.open('', `Connect ${provider}`, `width=${width},height=${height},top=${top},left=${left}`);
+        if (popup) {
+            popup.document.write(`
+                <html>
+                <head>
+                    <title>Connecting to ${provider}...</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8fafc; color: #334155; }
+                        .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+                        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                        h2 { margin-bottom: 8px; font-size: 18px; }
+                        p { font-size: 14px; color: #64748b; }
+                    </style>
+                </head>
+                <body>
+                    <div class="spinner"></div>
+                    <h2>Connecting to ${provider}</h2>
+                    <p>Authenticating safely...</p>
+                </body>
+                </html>
+            `);
+        }
+    } catch (e) {
+        console.warn("Popup blocked or failed, falling back to silent mock", e);
+    }
+
+    const delay = provider === 'LinkedIn' ? 2000 : 1500;
     
     setTimeout(() => {
+      if (popup && !popup.closed) popup.close();
+
       const id = `acc_${Math.random().toString(36).substr(2, 9)}`;
       const timestamp = new Date().toISOString();
       const expiresAt = Date.now() + 3600 * 1000; // 1 hour from now

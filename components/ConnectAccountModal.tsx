@@ -94,7 +94,7 @@ const ConnectAccountModal: React.FC<ConnectAccountModalProps> = ({ isOpen, onClo
                </div>
                <div className="text-center">
                  <h4 className="font-bold text-slate-800 text-lg">Connecting to {connectingProvider}...</h4>
-                 <p className="text-sm text-slate-500">Please complete the login in the popup window.</p>
+                 <p className="text-sm text-slate-500">Please wait while we authenticate...</p>
                </div>
             </div>
           ) : (
@@ -105,7 +105,7 @@ const ConnectAccountModal: React.FC<ConnectAccountModalProps> = ({ isOpen, onClo
                     <Settings size={16} /> Configure Client ID
                   </div>
                   <p className="text-xs text-amber-700 mb-3">
-                    Your environment variables weren't detected. Enter your Google Client ID manually to enable Real Mode.
+                    Your environment variables weren't detected. Enter your Google Client ID manually to enable Real Mode for Gmail.
                   </p>
                   <div className="flex gap-2">
                     <input 
@@ -154,8 +154,8 @@ const ConnectAccountModal: React.FC<ConnectAccountModalProps> = ({ isOpen, onClo
                     <Linkedin size={20} />
                   </div>
                   <div className="text-left">
-                    <div className="font-bold text-slate-800 group-hover:text-blue-700">LinkedIn</div>
-                    <div className="text-xs text-slate-500">Sync messages & InMail</div>
+                    <div className="font-bold text-slate-800 group-hover:text-blue-700">LinkedIn <span className="text-[10px] font-normal text-slate-400 border border-slate-200 rounded px-1 ml-1">SIMULATED</span></div>
+                    <div className="text-xs text-slate-500">Sync messages (Demo Mode)</div>
                   </div>
                 </div>
                 <ArrowRight size={18} className="text-slate-300 group-hover:text-blue-400" />
