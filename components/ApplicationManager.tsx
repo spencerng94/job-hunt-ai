@@ -142,7 +142,8 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
                 <tr>
                   <th className="p-3 font-semibold">Role & Company</th>
                   <th className="p-3 font-semibold hidden sm:table-cell">Status</th>
-                  <th className="p-3 font-semibold hidden md:table-cell">Applied</th>
+                  <th className="p-3 font-semibold hidden md:table-cell">Next Interview</th>
+                  <th className="p-3 font-semibold hidden lg:table-cell">Applied</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -162,7 +163,21 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
                         {app.status}
                       </span>
                     </td>
-                    <td className="p-3 hidden md:table-cell text-sm text-slate-500">
+                    <td className="p-3 hidden md:table-cell">
+                      {app.nextInterviewDate ? (
+                         <div className="flex flex-col">
+                             <span className="text-sm font-medium text-slate-700">
+                                {new Date(app.nextInterviewDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                             </span>
+                             <span className="text-xs text-slate-500">
+                                {new Date(app.nextInterviewDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                             </span>
+                         </div>
+                      ) : (
+                         <span className="text-xs text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="p-3 hidden lg:table-cell text-sm text-slate-500">
                       {new Date(app.dateApplied).toLocaleDateString()}
                     </td>
                   </tr>
