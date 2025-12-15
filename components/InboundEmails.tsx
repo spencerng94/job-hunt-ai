@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { InboundMessage, JobApplication, ApplicationStatus } from '../types';
+import { InboundMessage, JobApplication, ApplicationStatus, ConnectedAccount } from '../types';
 import { extractJobDetailsFromEmail } from '../services/geminiService';
-import { Mail, RefreshCw, Inbox, CalendarClock, Trash2, Search, X } from 'lucide-react';
+import { Mail, RefreshCw, Inbox, CalendarClock, Trash2, Search, X, CheckCircle2, AtSign } from 'lucide-react';
 import MessageViewer from './MessageViewer';
 import CreateApplicationModal from './CreateApplicationModal';
 
 interface InboundEmailsProps {
   emails: InboundMessage[]; 
   applications: JobApplication[];
+  accounts: ConnectedAccount[];
   onLinkEmail: (email: InboundMessage, appId: string) => void;
   onUpdateAppStatus: (appId: string, status: ApplicationStatus) => void;
   onAddApplication: (app: JobApplication) => void;
@@ -21,6 +22,7 @@ interface InboundEmailsProps {
 const InboundEmails: React.FC<InboundEmailsProps> = ({ 
   emails, 
   applications, 
+  accounts,
   onLinkEmail, 
   onUpdateAppStatus, 
   onAddApplication,
@@ -343,6 +345,8 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
              sortedSenders.map(senderKey => {
                 const thread = groupedMessages[senderKey];
                 const latest = thread[0];
+                const account = accounts.find(a => a.id === latest.accountId);
+                const isLinked = latest.linkedApplicationId || thread.some(m => !!m.linkedApplicationId);
                 
                 return (
                 <div 
@@ -368,13 +372,27 @@ const InboundEmails: React.FC<InboundEmailsProps> = ({
                     <div className="text-xs font-medium text-slate-700 mb-1 truncate pr-6 mt-1">{latest.subject || '(No Subject)'}</div>
                     <div className="text-xs text-slate-500 mb-2 truncate">{latest.snippet}</div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                          <span className="text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 bg-red-50 text-red-700 border-red-100">
                             <Mail size={10} />
                             Gmail
                          </span>
+
+                         {account && (
+                           <span className="text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 bg-slate-100 text-slate-500 border-slate-200 max-w-[140px] truncate" title={account.email}>
+                              <AtSign size={10} />
+                              {account.email}
+                           </span>
+                         )}
+
                          {thread.length > 1 && (
                             <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{thread.length} msgs</span>
+                         )}
+
+                         {isLinked && (
+                            <span className="ml-auto text-[10px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded border border-green-200 flex items-center gap-1 font-medium">
+                                <CheckCircle2 size={10} /> Linked
+                            </span>
                          )}
                     </div>
 

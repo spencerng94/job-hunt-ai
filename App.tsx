@@ -203,6 +203,7 @@ const App: React.FC = () => {
           <InboundEmails 
             emails={messages} 
             applications={applications}
+            accounts={accounts}
             onLinkEmail={handleLinkMessage}
             onUpdateAppStatus={(appId, status) => {
               const app = applications.find(a => a.id === appId);
