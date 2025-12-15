@@ -11,6 +11,7 @@ import { JobApplication, ApplicationStatus, InboundMessage, ConnectedAccount } f
 import { INITIAL_APPLICATIONS, MOCK_MESSAGES, MOCK_ACCOUNTS, NEW_INBOUND_MESSAGE } from './constants';
 import { Menu, RefreshCw } from 'lucide-react';
 import { syncAccountData } from './services/authService';
+import { fetchGmailMessages } from './services/gmailService';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -66,25 +67,47 @@ const App: React.FC = () => {
   const handleScanMessages = async () => {
     setIsScanning(true);
     
-    // Simulate syncing all connected accounts
+    // 1. Sync account tokens/status
     const syncPromises = accounts.map(acc => syncAccountData(acc));
     
     try {
       const updatedAccounts = await Promise.all(syncPromises);
-      setAccounts(updatedAccounts); // Update last synced times
+      setAccounts(updatedAccounts); 
+
+      // 2. Fetch Real Messages from Gmail Accounts
+      let newRealMessages: InboundMessage[] = [];
+      for (const acc of updatedAccounts) {
+        if (acc.provider === 'Gmail' && acc.accessToken && !acc.accessToken.startsWith('mock_')) {
+          const gmailMsgs = await fetchGmailMessages(acc.accessToken, acc.id);
+          newRealMessages = [...newRealMessages, ...gmailMsgs];
+        }
+      }
       
       setTimeout(() => {
         setIsScanning(false);
         setIsEmailScanned(true);
         
-        // Simulate finding a new message if it's not already there
-        const messageExists = messages.some(m => m.id === NEW_INBOUND_MESSAGE.id);
-        if (!messageExists && accounts.length > 0) {
-          // Attribute the new mock message to the first available account for demo purposes
-          const newMessageWithAccount = { ...NEW_INBOUND_MESSAGE, accountId: accounts[0].id };
-          setMessages(prev => [newMessageWithAccount, ...prev]);
-        }
-      }, 2000);
+        // 3. Merge Real Messages with Existing (deduplicating by ID)
+        setMessages(prev => {
+           // Start with previous messages
+           const existingIds = new Set(prev.map(m => m.id));
+           const uniqueNewReal = newRealMessages.filter(m => !existingIds.has(m.id));
+           
+           // Also add the demo mock message if strictly using mocks
+           const messageExists = prev.some(m => m.id === NEW_INBOUND_MESSAGE.id);
+           const shouldAddMock = accounts.some(a => a.accessToken.startsWith('mock_')) && !messageExists;
+           
+           let final = [...uniqueNewReal, ...prev];
+           
+           if (shouldAddMock) {
+              const newMessageWithAccount = { ...NEW_INBOUND_MESSAGE, accountId: accounts[0].id };
+              final = [newMessageWithAccount, ...final];
+           }
+           
+           return final.sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime());
+        });
+        
+      }, 1500); // Artificial delay for UX
     } catch (error) {
       console.error("Global scan failed", error);
       setIsScanning(false);

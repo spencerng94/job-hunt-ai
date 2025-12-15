@@ -13,6 +13,9 @@ interface AccountsManagerProps {
 const AccountsManager: React.FC<AccountsManagerProps> = ({ accounts, onAddAccount, onRemoveAccount, onSyncAccount }) => {
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Check for either CRA or Vite env var
+  const hasGoogleClientId = !!(process.env.REACT_APP_GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID);
 
   const handleSync = (id: string) => {
     setSyncingId(id);
@@ -57,6 +60,18 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ accounts, onAddAccoun
           <Plus size={18} /> Connect Account
         </button>
       </div>
+      
+      {!hasGoogleClientId && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={18} />
+          <div className="text-sm text-amber-800">
+            <strong>Running in Mock Mode:</strong> Real Gmail OAuth requires a Client ID. 
+            To enable real auth, add <code>REACT_APP_GOOGLE_CLIENT_ID</code> (or <code>VITE_GOOGLE_CLIENT_ID</code>) to your <code>.env</code> file.
+            <br />
+            <span className="text-xs opacity-75">LinkedIn connection is simulated as it requires a backend server for secure OAuth.</span>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4">
         {accounts.length === 0 ? (

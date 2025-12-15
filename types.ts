@@ -61,7 +61,7 @@ export interface ConnectedAccount {
   
   // Auth & Token Data (Simulated secure storage)
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   tokenExpiresAt: number; // Timestamp
   
   // Sync Status
@@ -75,4 +75,20 @@ export interface DashboardStats {
   active: number;
   interviews: number;
   offers: number;
+}
+
+// Add Google GIS types
+declare global {
+  interface Window {
+    google: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config: any) => {
+            requestAccessToken: () => void;
+          };
+          revoke: (accessToken: string, done: () => void) => void;
+        };
+      };
+    };
+  }
 }

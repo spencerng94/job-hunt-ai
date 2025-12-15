@@ -6,6 +6,8 @@
     <title>Job Hunt Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Identity Services for Real OAuth -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
       body { font-family: 'Inter', sans-serif; }
       /* Custom Scrollbar for cleaner look */
@@ -29,5 +31,7 @@
 </head>
   <body class="bg-slate-50 text-slate-900 antialiased">
     <div id="root"></div>
+    <!-- Entry point for Vite/Modern Bundlers -->
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
