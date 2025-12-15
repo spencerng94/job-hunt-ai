@@ -140,16 +140,30 @@ const ApplicationManager: React.FC<ApplicationManagerProps> = ({ applications, o
       {selectedApp ? (
         <div className={`w-full lg:w-1/2 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full animate-fade-in`}>
           <div className="p-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-bold text-slate-900">{selectedApp.roleTitle}</h2>
-                <a href={selectedApp.jobLink} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-600">
-                  <ExternalLink size={18} />
-                </a>
+            <div className="flex-1 min-w-0 mr-4">
+              <div className="flex items-center gap-2 mb-1">
+                <input 
+                  type="text"
+                  className="text-2xl font-bold text-slate-900 bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded px-1 -ml-1 w-full transition-all placeholder:text-slate-300"
+                  value={selectedApp.roleTitle}
+                  onChange={(e) => onUpdateApplication({...selectedApp, roleTitle: e.target.value})}
+                  placeholder="Role Title"
+                />
+                {selectedApp.jobLink && (
+                  <a href={selectedApp.jobLink} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-600 shrink-0 p-1">
+                    <ExternalLink size={20} />
+                  </a>
+                )}
               </div>
-              <div className="text-lg text-slate-600 font-medium">{selectedApp.companyName}</div>
+              <input 
+                type="text"
+                className="text-lg text-slate-600 font-medium bg-transparent border border-transparent hover:border-slate-300 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded px-1 -ml-1 w-full transition-all placeholder:text-slate-300"
+                value={selectedApp.companyName}
+                onChange={(e) => onUpdateApplication({...selectedApp, companyName: e.target.value})}
+                placeholder="Company Name"
+              />
             </div>
-            <button onClick={() => setSelectedAppId(null)} className="lg:hidden text-slate-400">
+            <button onClick={() => setSelectedAppId(null)} className="lg:hidden text-slate-400 hover:text-slate-600">
               <XCircle size={24} />
             </button>
           </div>
